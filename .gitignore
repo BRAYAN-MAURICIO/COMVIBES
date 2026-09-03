@@ -1,0 +1,57 @@
+# ══════════════════════════════════════════════════════════════════════
+# .gitignore raíz — cubre el frontend (comvibes/) y el backend
+# (comvibes-backend/) a la vez.
+#
+# Lo más importante de este archivo son las dos primeras secciones:
+# el repositorio es PÚBLICO y los .env contienen la contraseña de la base
+# de datos y la contraseña de aplicación de Gmail. Una vez que un secreto
+# entra al historial de Git, borrarlo después no lo quita: queda en los
+# commits anteriores y hay que rotarlo igual.
+# ══════════════════════════════════════════════════════════════════════
+
+# ── Secretos ─────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Dependencias ─────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── Compilados del frontend ──────────────────────────────────────────
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# ── Generados por el backend ─────────────────────────────────────────
+# Copias de seguridad que crea `npm run fix:imagenes`
+backup_uploads/
+
+# ── Logs ─────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Sistema operativo y editores ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── Comprimidos sueltos ──────────────────────────────────────────────
+# El código va versionado en el repo, no dentro de un .zip
+*.zip
+*.rar

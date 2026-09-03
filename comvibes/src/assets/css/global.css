@@ -1,0 +1,3167 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Roboto:wght@400;500&display=swap');
+@import './variables.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  font-family: var(--font-body);
+  color: var(--text);
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar-brand,
+.btn {
+  font-family: var(--font-display);
+}
+
+a {
+  text-decoration: none;
+}
+
+.main-container {
+  min-height: 100vh;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  font-family: var(--font-display);
+}
+
+/* ============================================================
+   Sidebar admin — responsive
+   El diseño original tenía un ancho fijo de 250px sin colapso,
+   inutilizable en móvil/tablet. Se colapsa fuera de pantalla
+   por defecto y se despliega con el botón hamburguesa propio
+   de SidebarAdmin.jsx.
+   ============================================================ */
+.sidebar-admin {
+  width: 260px;
+  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: -260px;
+  z-index: 1030;
+  transition: left 0.25s ease;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+  color: var(--on-primary);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.25rem;
+}
+
+.sidebar-admin--open {
+  left: 0;
+}
+
+@media (min-width: 992px) {
+  .sidebar-admin {
+    position: sticky;
+    left: 0;
+  }
+}
+
+.sidebar-admin__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-admin__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sidebar-admin__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar-admin__link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.sidebar-admin__link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--on-primary);
+}
+
+.sidebar-admin__link--active {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
+}
+
+.sidebar-admin__icon {
+  font-size: 1.05rem;
+  width: 20px;
+  text-align: center;
+}
+
+.sidebar-admin__footer {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-admin__user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.sidebar-admin__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Foco de teclado visible — WCAG 2.4.7 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Pulido visual global
+   Sobrescribe los defaults de Bootstrap usando la escala de
+   sombras/radios/transición de variables.css, sin tocar la paleta.
+   ============================================================ */
+
+/* --- Botones: más peso visual, feedback claro al interactuar --- */
+.btn {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  padding-block: 0.55rem;
+  letter-spacing: 0.01em;
+  transition: var(--transition);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.25);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(29, 78, 216, 0.32);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  transform: none;
+  box-shadow: none;
+}
+
+/* --- Tarjetas: sombra suave y elevación al pasar el mouse --- */
+.card {
+  background-color: var(--white);
+  color: var(--text);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Inputs y selects: foco consistente con la marca --- */
+.form-control,
+.form-select {
+  background-color: var(--white);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  border-color: var(--border);
+  padding-block: 0.55rem;
+  transition: var(--transition);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px var(--primary-softer);
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+  color: var(--text);
+}
+
+/* --- Badges: versión "subtle" más suave que los sólidos de Bootstrap --- */
+.badge {
+  font-weight: 600;
+  padding: 0.4em 0.75em;
+  border-radius: 999px;
+}
+
+/* --- Navbar: fija arriba con sombra al hacer scroll --- */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.15);
+}
+
+.navbar-brand {
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+
+.nav-link {
+  font-weight: 500;
+  position: relative;
+}
+
+/* --- Tablas: filas más respirables, encabezado con acento --- */
+.table thead {
+  background-color: var(--primary-softer);
+}
+
+.table thead th {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary-dark);
+  border-bottom: none;
+  padding-block: 0.9rem;
+}
+
+.table tbody td {
+  vertical-align: middle;
+  padding-block: 0.85rem;
+}
+
+/* --- Hero de Home: sección con acento de marca en vez de fondo plano --- */
+.hero-section {
+  background: linear-gradient(135deg, var(--primary-softer) 0%, var(--bg) 100%);
+  padding: 4.5rem 0 5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29, 78, 216, 0.10) 0%, rgba(29, 78, 216, 0) 70%);
+  top: -220px;
+  right: -120px;
+}
+
+.hero-section::after {
+  content: '';
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29, 78, 216, 0.08) 0%, rgba(29, 78, 216, 0) 70%);
+  bottom: -180px;
+  left: -100px;
+}
+
+.hero-section .container {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-dots {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  width: 120px;
+  height: 120px;
+  background-image: radial-gradient(var(--primary) 1.5px, transparent 1.5px);
+  background-size: 16px 16px;
+  opacity: 0.15;
+}
+
+/* --- Franjas alternas entre secciones (ritmo visual en Home) --- */
+.section-tinted {
+  background: var(--white);
+}
+
+.hero-visual {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+
+.hero-visual::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 2px dashed rgba(29, 78, 216, 0.25);
+}
+
+.hero-visual__icon {
+  color: var(--on-primary);
+}
+
+/* --- Íconos de beneficios / categorías (Home) --- */
+.feature-item__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius);
+  background: var(--primary-softer);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+
+.icon-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius);
+  background: var(--primary-softer);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* --- Tarjetas de estadística (dashboards admin/reportes) --- */
+.stat-card {
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+}
+
+.stat-card .stat-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+/* Variantes de color para las tarjetas de estadística y accesos rápidos */
+.stat-card--blue,
+.icon-badge--blue { --accent: var(--primary); --accent-bg: var(--primary-softer); }
+.stat-card--purple,
+.icon-badge--purple { --accent: #7C3AED; --accent-bg: #F3E8FF; }
+.stat-card--orange,
+.icon-badge--orange { --accent: #F59E0B; --accent-bg: #FEF3C7; }
+.stat-card--teal,
+.icon-badge--teal { --accent: #0D9488; --accent-bg: #CCFBF1; }
+.stat-card--red,
+.icon-badge--red { --accent: #EF4444; --accent-bg: #FEE2E2; }
+
+.stat-card--blue, .stat-card--purple, .stat-card--orange, .stat-card--teal, .stat-card--red {
+  border-left-color: var(--accent);
+}
+
+.stat-card__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.icon-badge--blue, .icon-badge--purple, .icon-badge--orange, .icon-badge--teal, .icon-badge--red {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* --- Tarjeta de acceso rápido (dashboard admin) --- */
+.quick-link-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem 1.1rem;
+  height: 100%;
+}
+
+/* --- Spinner: color de marca en vez del azul genérico de Bootstrap --- */
+.spinner-border.text-primary {
+  color: var(--primary) !important;
+}
+
+/* --- Footer: jerarquía tipográfica más clara --- */
+.site-footer a {
+  color: rgba(255, 255, 255, 0.75);
+  transition: var(--transition);
+}
+
+.site-footer a:hover {
+  color: var(--on-primary);
+}
+
+/* ============================================================
+   Auth (Login / Register) — panel dividido en vez de tarjeta
+   genérica centrada.
+   ============================================================ */
+.auth-shell {
+  min-height: calc(100vh - 76px); /* resta la altura aprox. del navbar */
+  display: flex;
+}
+
+.auth-brand {
+  flex: 1;
+  background: linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+  align-items: center;
+  padding: 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-brand::before {
+  content: '';
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  top: -80px;
+  right: -80px;
+}
+
+.auth-brand::after {
+  content: '';
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  bottom: -60px;
+  left: -60px;
+}
+
+.auth-brand__badge {
+  display: inline-block;
+  color: var(--on-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
+.auth-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  background-color: var(--white);
+}
+
+.auth-form-panel__inner {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* --- Stepper de cantidad (carrito) --- */
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.qty-stepper__btn {
+  background: var(--bg);
+  border: none;
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.qty-stepper__btn:hover:not(:disabled) {
+  background: var(--primary-softer);
+  color: var(--primary);
+}
+
+.qty-stepper__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qty-stepper__value {
+  min-width: 32px;
+  text-align: center;
+  font-weight: 600;
+}
+.input-icon {
+  position: relative;
+}
+
+.input-icon .form-control {
+  padding-left: 2.5rem;
+}
+
+.input-icon__glyph {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* --- 404 --- */
+.not-found-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--primary-softer);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- Menú de cuenta (Navbar) --- */
+.account-menu {
+  position: relative;
+}
+
+.account-menu__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 0.5rem;
+  min-width: 190px;
+  z-index: 1040;
+}
+
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-align: left;
+  transition: var(--transition);
+}
+
+.account-menu__item:hover {
+  background: var(--primary-softer);
+  color: var(--primary);
+}
+
+.account-menu__item--danger:hover {
+  background: #FEF2F2;
+  color: var(--danger);
+}
+
+.notifications-dropdown {
+  min-width: 300px;
+  max-width: 340px;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  text-align: left;
+  position: relative;
+  transition: var(--transition);
+}
+
+.notification-item:hover {
+  background: var(--primary-softer);
+}
+
+.notification-item--unread {
+  background: var(--primary-softer);
+}
+
+.notification-item__dot {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.6rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+/* --- Buscador global (Navbar) --- */
+.navbar-search-wrap {
+  order: -1;
+  margin: 0.75rem 0;
+  flex-basis: 100%;
+}
+
+@media (min-width: 992px) {
+  .navbar-search-wrap {
+    flex-basis: auto;
+    margin: 0 1rem;
+    width: 260px;
+  }
+}
+
+.navbar-search {
+  position: relative;
+}
+
+.navbar-search__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 0.4rem;
+  z-index: 1040;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.navbar-search__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text);
+  transition: var(--transition);
+}
+
+.navbar-search__item:hover {
+  background: var(--primary-softer);
+}
+
+.navbar-search__seeall {
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.5rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.navbar-search__seeall:hover {
+  background: var(--primary-softer);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Filas de pedido expandibles (OrderHistory) --- */
+.order-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.order-row__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-softer);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.order-row__info {
+  min-width: 0;
+}
+
+@media (max-width: 576px) {
+  .order-row {
+    grid-template-columns: auto 1fr auto;
+    row-gap: 0.5rem;
+  }
+  .order-row__total {
+    grid-column: 2;
+  }
+}
+
+/* --- Placeholder para imágenes de producto rotas/inexistentes --- */
+.product-image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--text-muted);
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Galería de fotos de producto (ProductDetail) --- */
+.product-gallery__zoom {
+  position: relative;
+  overflow: hidden;
+  height: 420px;
+  cursor: zoom-in;
+  /* Fondo blanco: con object-fit:contain la foto ya no llena la caja y el
+     sobrante tiene que ser del mismo blanco que el fondo de las fotos. */
+  background: #ffffff;
+}
+
+/* Fotos de baja resolución: ProductGallery desactiva el zoom y el cursor
+   deja de prometer algo que se vería peor de lo que ya se ve. */
+.product-gallery__zoom--sin-zoom {
+  cursor: default;
+}
+
+.product-gallery__zoom-img {
+  transition: transform 0.25s ease;
+  transform-origin: var(--zoom-x) var(--zoom-y);
+}
+
+.product-gallery__zoom-img.is-zoomed {
+  /* Antes scale(2). Solo se aplica cuando la foto mide 700px o más (lo decide
+     ProductGallery), y 1.8x es el techo donde todavía se ve nítida. */
+  transform: scale(1.8);
+}
+
+.product-gallery__thumbs {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.product-gallery__thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: var(--transition);
+  opacity: 0.7;
+}
+
+.product-gallery__thumb:hover {
+  opacity: 1;
+}
+
+.product-gallery__thumb--active {
+  border-color: var(--primary);
+  opacity: 1;
+}
+
+/* --- Ficha técnica (marca / color / talla) en ProductDetail --- */
+.product-specs {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.product-specs strong {
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+/* --- Indicador de pasos (Checkout) --- */
+.checkout-steps {
+  display: flex;
+  align-items: center;
+}
+
+.checkout-steps__step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.checkout-steps__step:last-child {
+  flex: 0;
+}
+
+.checkout-steps__circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+.checkout-steps__circle--done {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--on-primary);
+}
+
+.checkout-steps__circle--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.checkout-steps__line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 0.75rem;
+}
+
+.checkout-section-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary-softer);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.address-card--selectable {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.address-card--selectable:hover {
+  border-color: var(--primary) !important;
+}
+
+/* --- Skeleton loaders --- */
+.skeleton {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #E9ECEF 25%, #F5F6F8 37%, #E9ECEF 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.skeleton-text {
+  border-radius: 4px;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* --- Factura / impresión --- */
+@media print {
+  .invoice-toolbar {
+    display: none !important;
+  }
+
+  .invoice-sheet {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+/* --- Micro-animaciones: transición entre páginas --- */
+.page-transition {
+  animation: page-fade-in 0.28s ease;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Micro-animaciones: entrada escalonada de tarjetas (catálogo) --- */
+.catalog-card-enter {
+  animation: catalog-card-fade-in 0.4s ease both;
+  animation-delay: var(--card-delay, 0s);
+}
+
+@keyframes catalog-card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition,
+  .catalog-card-enter,
+  .skeleton {
+    animation: none !important;
+  }
+}
+
+/* --- Breadcrumbs --- */
+.breadcrumbs__list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.breadcrumbs__link {
+  color: var(--text-muted);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: var(--transition);
+}
+
+.breadcrumbs__link:hover {
+  color: var(--primary);
+}
+
+.breadcrumbs__chevron {
+  color: var(--border);
+  margin: 0 0.15rem;
+}
+
+.breadcrumbs__current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* --- Paginación --- */
+.pagination .page-link {
+  color: var(--text);
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0 2px;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.pagination .page-link:hover {
+  background-color: var(--primary-softer);
+  color: var(--primary);
+}
+
+/* --- Insignia de ranking (Reportes: productos más vendidos) --- */
+.ranking-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary-softer);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* --- Estrellas de calificación (reseñas de productos) --- */
+.star-rating__star {
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 0;
+  transition: transform 0.15s ease;
+}
+
+.star-rating__star:not(:disabled):hover {
+  transform: scale(1.15);
+}
+
+/* ============================================================
+   Modo oscuro — compatibilidad con utilidades de Bootstrap que
+   traen colores fijos y no reaccionan a las variables de arriba.
+   ============================================================ */
+[data-theme='dark'] .bg-white {
+  background-color: var(--white) !important;
+}
+
+[data-theme='dark'] .bg-light {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+[data-theme='dark'] .text-muted {
+  color: var(--text-muted) !important;
+}
+
+[data-theme='dark'] .table {
+  color: var(--text);
+  --bs-table-color: var(--text);
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+  --bs-table-border-color: var(--border);
+}
+
+[data-theme='dark'] hr {
+  border-color: var(--border);
+  opacity: 0.5;
+}
+
+[data-theme='dark'] .form-control::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Transición suave al alternar de tema, sin afectar hovers de botones/cards */
+body,
+.card,
+.form-control,
+.form-select {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* --- Avatar de perfil (UserProfile) --- */
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+   Toasts — reemplazan SweetAlert2 para confirmaciones menores
+   (guardar, actualizar, eliminar, agregar al carrito). Aparecen
+   apilados en la esquina inferior derecha y se auto-descartan.
+   SweetAlert2 se sigue usando para lo que sí amerita interrumpir:
+   confirmar compra, login/registro, y errores.
+   ============================================================ */
+.toast-stack {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(340px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.app-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--white);
+  color: var(--text);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  border-left: 4px solid var(--success);
+  padding: 12px 14px;
+  animation: toast-in 0.25s ease both;
+}
+
+.app-toast--success {
+  border-left-color: var(--success);
+}
+.app-toast--warning {
+  border-left-color: var(--warning);
+}
+.app-toast--info {
+  border-left-color: var(--primary);
+}
+.app-toast--error {
+  border-left-color: var(--danger);
+}
+
+.app-toast__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.app-toast--success .app-toast__icon {
+  color: var(--success);
+}
+.app-toast--warning .app-toast__icon {
+  color: var(--warning);
+}
+.app-toast--info .app-toast__icon {
+  color: var(--primary);
+}
+.app-toast--error .app-toast__icon {
+  color: var(--danger);
+}
+
+.app-toast__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-toast__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.app-toast__text {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.app-toast__close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.app-toast__close:hover {
+  color: var(--text);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   Admin 2.0 — Componentes visuales integrados del diseño 2.0
+   Banners gradient, order cards, status badges, table footers,
+   product icons de stock. Complementan el sistema existente
+   sin sobreescribir nada del layout de Bootstrap.
+   ============================================================ */
+
+/* ── Banner gradient oscuro (header de páginas admin) ───────── */
+.admin-banner {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-banner__title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.admin-banner__sub {
+  font-size: 0.875rem;
+  opacity: 0.7;
+  margin: 0.2rem 0 0;
+}
+
+.admin-banner__stats {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.admin-banner__stat {
+  text-align: center;
+}
+
+.admin-banner__stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.admin-banner__stat-label {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Header page admin con gradiente ────────────────────────── */
+.admin-page-header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #fff;
+  padding: 2rem;
+  border-radius: var(--radius);
+  margin-bottom: 2rem;
+}
+
+.admin-page-header__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.admin-page-header__sub {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.7);
+  margin: 0.25rem 0 0;
+}
+
+.admin-page-header__badges {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-badge {
+  padding: 0.35rem 1rem;
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* ── Tabla admin: estilos 2.0 ───────────────────────────────── */
+.admin-table-wrapper {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table thead th {
+  padding: 0.75rem 1.25rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.admin-table tbody td {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.875rem;
+  color: #1a1a2e;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover td {
+  background: #f9fafb;
+}
+
+/* ── Footer de estadísticas en tablas ───────────────────────── */
+.admin-table-footer {
+  padding: 1rem 1.25rem;
+  background: #f9fafb;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+
+.admin-table-footer__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.admin-table-footer__label { color: #6b7280; }
+.admin-table-footer__value { font-weight: 700; color: #1a1a2e; }
+.admin-table-footer__value--success { color: #065f46; }
+.admin-table-footer__value--warning { color: #d97706; }
+.admin-table-footer__value--danger  { color: #dc2626; }
+.admin-table-footer__value--blue    { color: #1e40af; }
+
+/* ── Status badges de color (pedidos, soporte, stock) ────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge--entregado  { background: #d1fae5; color: #065f46; }
+.status-badge--en-camino  { background: #dbeafe; color: #1e40af; }
+.status-badge--cancelado  { background: #fee2e2; color: #991b1b; }
+.status-badge--pendiente  { background: #fef3c7; color: #92400e; }
+.status-badge--abierto    { background: #fef3c7; color: #92400e; }
+.status-badge--en-progreso{ background: #dbeafe; color: #1e40af; }
+.status-badge--cerrado    { background: #d1fae5; color: #065f46; }
+.status-badge--activo     { background: #d1fae5; color: #065f46; }
+.status-badge--bloqueado  { background: #fee2e2; color: #991b1b; }
+.status-badge--agotado    { background: #fee2e2; color: #991b1b; }
+.status-badge--bajo-stock { background: #fef3c7; color: #92400e; }
+.status-badge--disponible { background: #d1fae5; color: #065f46; }
+
+/* ── Order card 2.0 (pedidos recientes en dashboard) ─────────── */
+.order-card-2 {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: default;
+}
+
+.order-card-2:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+  border-color: var(--primary);
+}
+
+.order-card-2__progress {
+  height: 3px;
+  border-radius: 2px;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+
+.order-card-2__progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.order-card-2__progress-bar--entregado { background: #10b981; width: 100%; }
+.order-card-2__progress-bar--en-camino { background: #3b82f6; width: 66%; }
+.order-card-2__progress-bar--cancelado { background: #ef4444; width: 5%; }
+.order-card-2__progress-bar--pendiente { background: #f59e0b; width: 33%; }
+
+/* ── Product icon con estado de stock ────────────────────────── */
+.product-stock-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.product-stock-icon--ok       { background: #f3f4f6; }
+.product-stock-icon--low      { background: #fef3c7; }
+.product-stock-icon--out      { background: #fee2e2; }
+
+/* ── Select de estado coloreado (OrderManagement) ────────────── */
+.estado-select {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.estado-select--Entregado { background: #d1fae5; color: #065f46; }
+.estado-select--en-camino { background: #dbeafe; color: #1e40af; }
+.estado-select--Cancelado { background: #fee2e2; color: #991b1b; }
+.estado-select--Pendiente { background: #fef3c7; color: #92400e; }
+
+/* ── User avatar con estado ──────────────────────────────────── */
+.user-avatar-2 {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.user-avatar-2--active  { background: #eff6ff; color: #1e40af; }
+.user-avatar-2--blocked { background: #fee2e2; color: #991b1b; }
+
+/* ── Barra de progreso de stock (Reportes) ────────────────────── */
+.stock-progress {
+  background: #f9fafb;
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.stock-progress__bar-track {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.stock-progress__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* ── Role select coloreado (UserManagement) ─────────────────── */
+.role-select {
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  width: 130px;
+  transition: border-color 0.2s;
+}
+
+.role-select--admin  { border: 2px solid #2563eb; background: #eff6ff; color: #1e40af; }
+.role-select--cliente{ border: 2px solid #e5e7eb; background: #fff;    color: #374151; }
+
+/* ── Timeline de actividad (Dashboard) ───────────────────────── */
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0.25rem;
+}
+
+.activity-timeline__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.activity-timeline__item:last-child {
+  border-bottom: none;
+}
+
+.activity-timeline__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Slugs en minúscula y con guion, iguales a los de status-badge y
+   order-card-2. Antes convivían '--Entregado' con mayúscula y '--en-camino'
+   sin ella, así que la mitad de los puntos salía sin color. */
+.activity-timeline__dot--entregado { background: #10b981; }
+.activity-timeline__dot--en-camino { background: #3b82f6; }
+.activity-timeline__dot--cancelado { background: #ef4444; }
+.activity-timeline__dot--pendiente { background: #f59e0b; }
+
+
+/* ============================================================
+   Mejoras de diseño — Alta prioridad (Agosto 2025)
+   ============================================================ */
+
+/* ── 1. ProductCard v2 ───────────────────────────────────────── */
+.product-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.product-card:hover {
+  box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+  transform: translateY(-4px);
+}
+
+/* Imagen con relación de aspecto fija — toda la grilla alineada */
+.product-card__img-wrap {
+  position: relative;
+  /* Cuadrada: casi todas las fotos de producto vienen 1:1, así entran enteras.
+     Con 4/3 + object-fit:cover se les recortaba el 25% de arriba y abajo. */
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #ffffff;
+}
+.product-card__img {
+  width: 100%;
+  height: 100%;
+  /* 'contain' no recorta: la foto entra completa y el sobrante queda blanco,
+     que es el mismo fondo que traen las fotos de producto. */
+  object-fit: contain;
+  padding: 10px;
+  transition: transform 0.4s ease;
+}
+.product-card:hover .product-card__img {
+  /* Antes 1.04. Sobre una foto de 400px cualquier aumento se nota como
+     pérdida de nitidez; 1.02 mantiene el gesto sin degradar la imagen. */
+  transform: scale(1.02);
+}
+
+/* Overlay que aparece al hacer hover */
+.product-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  padding: 1rem;
+}
+.product-card:hover .product-card__overlay {
+  opacity: 1;
+}
+.product-card__overlay-btn {
+  width: 100%;
+  max-width: 200px;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s;
+  text-decoration: none;
+}
+.product-card__overlay-btn:hover { transform: scale(1.04); }
+.product-card__overlay-btn--cart {
+  background: var(--primary, #3b82f6);
+  color: #fff;
+}
+.product-card__overlay-btn--cart:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+}
+.product-card__overlay-btn--view {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.4);
+}
+
+/* Botón wishlist — siempre visible en la esquina */
+.product-card__wish {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.92);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  transition: transform 0.18s, background 0.18s;
+}
+.product-card__wish:hover {
+  transform: scale(1.12);
+  background: #fff;
+}
+
+/* Badge agotado */
+.product-card__badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  z-index: 2;
+}
+.product-card__badge--out { background: #fef2f2; color: #dc2626; }
+
+/* Cuerpo de la tarjeta */
+.product-card__body {
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.product-card__category {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin: 0 0 0.25rem;
+}
+.product-card__name {
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 0.3rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.product-card__price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary, #3b82f6);
+}
+.product-card__stock {
+  font-size: 0.75rem;
+  color: #059669;
+  font-weight: 600;
+}
+
+/* ── 2. Navbar: indicador de ruta activa ─────────────────────── */
+.nav-link--active {
+  color: var(--primary, #3b82f6) !important;
+  font-weight: 600;
+  position: relative;
+}
+/* Línea inferior animada */
+.nav-link--active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--primary, #3b82f6);
+  animation: nav-underline 0.2s ease forwards;
+}
+@keyframes nav-underline {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+/* ── 3. Hero visual v2 — composición de tarjetas ─────────────── */
+.hero-visual-v2 {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  flex-shrink: 0;
+}
+
+/* Tarjeta base */
+.hero-card {
+  position: absolute;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+  overflow: hidden;
+  transition: transform 0.35s ease;
+}
+
+/* Tarjeta principal (frente) */
+.hero-card--front {
+  width: 190px;
+  left: 60px;
+  top: 30px;
+  z-index: 3;
+  animation: heroFloat 4s ease-in-out infinite;
+}
+/* Tarjeta secundaria (atrás, girada) */
+.hero-card--back {
+  width: 160px;
+  right: 0;
+  top: 80px;
+  z-index: 2;
+  transform: rotate(6deg);
+  animation: heroFloat 4s ease-in-out infinite 0.8s;
+}
+/* Pill flotante de envío */
+.hero-card--float {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  padding: 0.55rem 1rem;
+  border-radius: 9999px;
+  width: auto;
+  left: 0;
+  bottom: 20px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  animation: heroFloat 3.5s ease-in-out infinite 1.4s;
+}
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0)   rotate(0deg); }
+  50%       { transform: translateY(-8px) rotate(0deg); }
+}
+.hero-card--back { animation-name: heroFloatBack; }
+@keyframes heroFloatBack {
+  0%, 100% { transform: translateY(0)    rotate(6deg); }
+  50%       { transform: translateY(-6px) rotate(6deg); }
+}
+
+/* Imagen dentro de la hero-card */
+.hero-card__img {
+  width: 100%;
+  height: 110px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #f0fdf4 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+}
+.hero-card__img--1::after { content: '👜'; }
+.hero-card__img--2::after { content: '🕶️'; }
+
+.hero-card__body { padding: 0.7rem 0.9rem 0.8rem; }
+.hero-card__tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 0.2rem;
+}
+.hero-card__name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 0.25rem;
+}
+.hero-card__price {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary, #3b82f6);
+}
+.hero-card__badge {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #d97706;
+  background: #fef3c7;
+  border-radius: 9999px;
+  padding: 0.15rem 0.55rem;
+}
+
+/* Responsive: ocultar la composición en mobile muy pequeño */
+@media (max-width: 480px) {
+  .hero-visual-v2 {
+    width: 240px;
+    height: 240px;
+    transform: scale(0.85);
+    transform-origin: center;
+  }
+}
+
+
+/* ================================================================
+   ORDER STEPPER — historial de pedidos
+   Horizontal en desktop, vertical en móvil (<576px)
+   ================================================================ */
+
+.order-stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 1.75rem;
+  padding: 1.25rem 1rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+}
+
+/* ── Cada paso ── */
+.order-stepper__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  text-align: center;
+}
+
+/* ── Línea conectora (se posiciona entre burbujas) ── */
+.order-stepper__connector {
+  position: absolute;
+  top: 17px;           /* centrada con la burbuja de 34px */
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: var(--border);
+  transition: background 0.4s ease;
+  z-index: 0;
+}
+
+.order-stepper__connector--filled {
+  background: var(--primary);
+}
+
+/* ── Burbuja con icono ── */
+.order-stepper__bubble {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--text-muted);
+  position: relative;
+  z-index: 1;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.order-stepper__bubble--active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.order-stepper__bubble--done {
+  border-color: var(--primary);
+  background: var(--primary-softer);
+  color: var(--primary);
+}
+
+/* ── Texto bajo la burbuja ── */
+.order-stepper__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 0.5rem;
+  gap: 2px;
+}
+
+.order-stepper__label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+.order-stepper__label--active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.order-stepper__label--done {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.order-stepper__sub {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Estado cancelado ── */
+.order-stepper--cancelled {
+  display: block;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  padding: 1rem 1.25rem;
+}
+
+[data-theme='dark'] .order-stepper--cancelled {
+  background: #2d1515;
+  border-color: #7f1d1d;
+}
+
+.order-stepper__cancelled-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #991b1b;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+[data-theme='dark'] .order-stepper__cancelled-badge {
+  color: #fca5a5;
+}
+
+.order-stepper__cancelled-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Responsive: vertical en móvil ── */
+@media (max-width: 576px) {
+  .order-stepper {
+    flex-direction: column;
+    gap: 0;
+    padding: 1rem;
+  }
+
+  .order-stepper__item {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    flex: none;
+    width: 100%;
+    padding-bottom: 1rem;
+    gap: 0.75rem;
+  }
+
+  .order-stepper__item:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Línea vertical en móvil */
+  .order-stepper__connector {
+    position: absolute;
+    top: 34px;
+    left: 16px;
+    right: auto;
+    width: 2px;
+    height: calc(100%);
+    background: var(--border);
+  }
+
+  .order-stepper__connector--filled {
+    background: var(--primary);
+  }
+
+  .order-stepper__text {
+    align-items: flex-start;
+    margin-top: 6px;
+  }
+
+  .order-stepper__label {
+    white-space: normal;
+  }
+
+  .order-stepper__sub {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+
+/* ================================================================
+   CART SUMMARY — resumen sticky del carrito
+   ================================================================ */
+
+.cart-summary-wrapper {
+  position: sticky;
+  top: 96px;   /* altura del navbar — ajustar si cambia */
+}
+
+.cart-summary {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+.cart-summary__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 1.1rem;
+  color: var(--text);
+}
+
+/* ── Barra de progreso envío gratis ── */
+.cart-summary__shipping-progress {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.cart-summary__shipping-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.cart-summary__progress-bar {
+  height: 5px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 0.4rem;
+}
+
+.cart-summary__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-light), var(--primary));
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* ── Badge envío gratis ── */
+.cart-summary__free-shipping {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #065f46;
+  background: #d1fae5;
+  border-radius: 99px;
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+[data-theme='dark'] .cart-summary__free-shipping {
+  background: #052e16;
+  color: #6ee7b7;
+}
+
+/* ── Filas de detalle ── */
+.cart-summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.cart-summary__row-label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.cart-summary__count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.cart-summary__free-tag {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #065f46;
+}
+
+[data-theme='dark'] .cart-summary__free-tag {
+  color: #6ee7b7;
+}
+
+/* ── Divisor ── */
+.cart-summary__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.9rem 0;
+}
+
+/* ── Fila total ── */
+.cart-summary__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.25rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.cart-summary__total-amount {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--primary);
+}
+
+/* ── Botón CTA ── */
+.cart-summary__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+
+/* ================================================================
+   SITE FOOTER — con redes sociales
+   ================================================================ */
+
+.site-footer {
+  background: #0f172a;
+  color: #94a3b8;
+  padding: 3.5rem 0 0;
+  margin-top: 4rem;
+}
+
+.site-footer__brand {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.4rem;
+  color: #fff;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.site-footer__tagline {
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: #64748b;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Redes sociales ── */
+.site-footer__social {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.site-footer__social-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1e293b;
+  color: #94a3b8;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.site-footer__social-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+/* ── Encabezados de columna ── */
+.site-footer__heading {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+/* ── Links de navegación ── */
+.site-footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.site-footer__links a {
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.15s ease;
+}
+
+.site-footer__links a:hover {
+  color: #e2e8f0;
+}
+
+/* ── Contacto ── */
+.site-footer__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.site-footer__contact li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.site-footer__contact a {
+  color: #64748b;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.site-footer__contact a:hover {
+  color: #e2e8f0;
+}
+
+/* ── Divisor y barra inferior ── */
+.site-footer__divider {
+  height: 1px;
+  background: #1e293b;
+  margin: 2.5rem 0 1.25rem;
+}
+
+.site-footer__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-bottom: 1.75rem;
+}
+
+.site-footer__bottom p {
+  font-size: 0.8rem;
+  color: #475569;
+  margin: 0;
+}
+
+.site-footer__legal {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.site-footer__legal a {
+  font-size: 0.8rem;
+  color: #475569;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.site-footer__legal a:hover {
+  color: #94a3b8;
+}
+
+
+/* ================================================================
+   EMPTY STATE — estados vacíos ilustrados
+   ================================================================ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  gap: 0.25rem;
+}
+
+.empty-state__illustration {
+  margin-bottom: 1rem;
+  animation: float 3.5s ease-in-out infinite;
+}
+
+.empty-state__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+
+.empty-state__desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 340px;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+/* Reutiliza la animación float del Hero si ya existe, si no la define */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+
+/* ================================================================
+   PRODUCT GALLERY — contador de imagen y flechas de navegación
+   ================================================================ */
+
+/* ── Contador "1 / 3" ── */
+.gallery-counter {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.52);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+/* ── Flechas prev / next ── */
+.gallery-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.85);
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+  opacity: 0;          /* ocultas por defecto, aparecen al hacer hover en el contenedor */
+}
+
+.product-gallery__zoom:hover .gallery-arrow {
+  opacity: 1;
+}
+
+.gallery-arrow:hover {
+  background: #fff;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.gallery-arrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.gallery-arrow--prev { left: 10px;  }
+.gallery-arrow--next { right: 10px; }
+
+/* En móvil las flechas están siempre visibles (no hay hover) */
+@media (max-width: 768px) {
+  .gallery-arrow {
+    opacity: 1;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ── Miniaturas: indicador de posición (dots) cuando hay muchas ── */
+.product-gallery__thumbs {
+  scrollbar-width: none;   /* Firefox */
+}
+.product-gallery__thumbs::-webkit-scrollbar {
+  display: none;           /* Chrome/Safari */
+}
+
+.product-gallery__thumb--active {
+  box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px rgba(37,99,235,0.18);
+}
+
+
+/* ================================================================
+   MEJORAS VISUALES — Agosto 2026
+   1. Fondo global con degradado suave
+   2. Carrusel de productos destacados
+   3. Micro-animaciones de entrada (features, categorías)
+   ================================================================ */
+
+/* ── 1. Fondo global: degradado muy sutil sobre todas las páginas ── */
+body {
+  background: linear-gradient(
+    160deg,
+    var(--bg) 0%,
+    color-mix(in srgb, var(--primary) 3%, var(--bg)) 50%,
+    var(--bg) 100%
+  );
+  background-attachment: fixed;
+}
+
+/* Fallback para browsers sin color-mix */
+@supports not (background: color-mix(in srgb, red 1%, blue)) {
+  body {
+    background: var(--bg);
+  }
+}
+
+[data-theme='dark'] body {
+  background: linear-gradient(
+    160deg,
+    #0F172A 0%,
+    #111827 50%,
+    #0F172A 100%
+  );
+  background-attachment: fixed;
+}
+
+/* ── 2. Carrusel de productos destacados ──────────────────────── */
+
+.carousel-track-wrapper {
+  position: relative;
+  overflow: hidden;
+  /* espacio lateral para las flechas */
+  padding: 0 0.5rem;
+}
+
+/* Las flechas del carrusel */
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--white);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.carousel-arrow:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.carousel-arrow--prev { left: -18px; }
+.carousel-arrow--next { right: -18px; }
+
+@media (max-width: 576px) {
+  .carousel-arrow--prev { left: -10px; }
+  .carousel-arrow--next { right: -10px; }
+}
+
+/* Pista de tarjetas */
+.carousel-track {
+  display: flex;
+  gap: 1.5rem;
+  /* Animación al cambiar */
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); /* ease-out-expo: arranca rápido, frena suave */
+  animation-fill-mode: both;
+}
+
+.carousel-track--right {
+  animation-name: carousel-slide-right;
+}
+
+.carousel-track--left {
+  animation-name: carousel-slide-left;
+}
+
+@keyframes carousel-slide-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes carousel-slide-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Cada slot de tarjeta */
+.carousel-item-slot {
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* Dots indicadores del carrusel */
+.carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, width 0.2s ease;
+}
+
+.carousel-dot--active {
+  width: 20px;
+  border-radius: 4px;
+  background: var(--primary);
+  transform: none;
+}
+
+/* ── 3. Micro-animaciones de entrada ──────────────────────────── */
+
+/* Features (íconos de beneficios) — entran desde abajo escalonados */
+.feature-animate {
+  animation: fade-up 0.5s ease both;
+  animation-delay: calc(var(--i) * 80ms + 100ms);
+}
+
+/* Tarjetas de categoría — entran desde abajo escalonadas */
+.cat-animate {
+  animation: fade-up 0.5s ease both;
+  animation-delay: calc(var(--i) * 100ms + 100ms);
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Respetar prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .carousel-track,
+  .feature-animate,
+  .cat-animate {
+    animation: none !important;
+  }
+
+  .carousel-track--right,
+  .carousel-track--left {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+
+/* ================================================================
+   HERO MAP — mapa de cobertura del Huila (reemplaza hero-visual-v2)
+   ================================================================ */
+
+.hero-map-wrap {
+  perspective: 900px;
+  animation: heroFloat 5s ease-in-out infinite;
+}
+
+.hero-map-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  width: 300px;
+  transform: rotate(-2deg);
+  transition: transform 0.3s ease;
+}
+
+.hero-map-card:hover {
+  transform: rotate(0deg) scale(1.02);
+}
+
+/* Cabecera con badge y conteo */
+.hero-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.1rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-map-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-softer);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+.hero-map-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Área del SVG */
+.hero-map-body {
+  padding: 0.5rem 0.5rem 0;
+  background: linear-gradient(160deg, #f0f5ff 0%, #f8faff 100%);
+}
+
+[data-theme='dark'] .hero-map-body {
+  background: linear-gradient(160deg, #1e293b 0%, #0f172a 100%);
+}
+
+.hero-map-svg {
+  width: 100%;
+  display: block;
+}
+
+/* Silueta del departamento */
+.hero-map-region {
+  fill: #dbeafe;
+  stroke: #93c5fd;
+  stroke-width: 1.5;
+  transition: fill 0.3s ease;
+}
+
+[data-theme='dark'] .hero-map-region {
+  fill: #1e3a5f;
+  stroke: #3b82f6;
+}
+
+/* Puntos de entrega */
+.hero-map-dot circle:first-child {
+  fill: var(--primary);
+}
+
+/* Onda pulsante */
+.hero-map-pulse {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  animation: map-pulse 2s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.hero-map-dot {
+  animation: dot-appear 0.4s ease both;
+}
+
+@keyframes map-pulse {
+  0%   { r: 5;  opacity: 0.8; }
+  100% { r: 14; opacity: 0;   }
+}
+
+@keyframes dot-appear {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Etiquetas de municipios */
+.hero-map-label {
+  font-size: 8.5px;
+  font-weight: 600;
+  fill: #1e40af;
+  font-family: var(--font-body);
+}
+
+[data-theme='dark'] .hero-map-label {
+  fill: #93c5fd;
+}
+
+/* Pill de "Envíos en curso" */
+.hero-map-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  border-top: 1px solid var(--border);
+}
+
+.hero-map-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .hero-map-card {
+    width: 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-map-pulse,
+  .hero-map-dot,
+  .hero-map-pill__dot,
+  .hero-map-wrap {
+    animation: none !important;
+  }
+  .hero-map-pulse {
+    opacity: 0;
+  }
+}
+
+
+/* ================================================================
+   HERO CIRCLE — círculo rotativo de productos en el Hero
+   ================================================================ */
+
+.hero-circle-wrap {
+  position: relative;
+  width: 320px;
+  height: 340px;
+  flex-shrink: 0;
+}
+
+/* ── Círculo principal ─────────────────────────────────────── */
+.hero-circle {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: var(--slide-color, var(--primary-softer));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+  transition: background 0.5s ease;
+  animation: heroFloat 5s ease-in-out infinite;
+  overflow: hidden;
+}
+
+/* Imagen dentro del círculo */
+.hero-circle__img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(0.88);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-circle__img--visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── Anillo decorativo exterior ──────────────────────────── */
+.hero-circle-ring {
+  position: absolute;
+  top: -14px;
+  left: -14px;
+  width: 308px;
+  height: 308px;
+  border-radius: 50%;
+  border: 2px dashed rgba(29, 78, 216, 0.2);
+  animation: spin-slow 18s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Tarjeta flotante de producto ────────────────────────── */
+.hero-product-card {
+  position: absolute;
+  bottom: 50px;
+  right: -10px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 0.65rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+}
+
+.hero-product-card--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-product-card__cat {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.hero-product-card__name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.hero-product-card__price {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.hero-product-card__badge {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  width: fit-content;
+}
+
+/* ── Pill de envío ───────────────────────────────────────── */
+.hero-circle-pill {
+  position: absolute;
+  bottom: 0;
+  left: -5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--white);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  animation: heroFloat 3.5s ease-in-out infinite 1s;
+}
+
+/* ── Dots indicadores ────────────────────────────────────── */
+.hero-circle-dots {
+  position: absolute;
+  top: 292px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.hero-circle-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s ease, width 0.2s ease;
+}
+
+.hero-circle-dot--active {
+  width: 18px;
+  border-radius: 4px;
+  background: var(--primary);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .hero-circle-wrap { width: 280px; height: 300px; }
+  .hero-circle      { width: 240px; height: 240px; }
+  .hero-circle-ring { width: 268px; height: 268px; top: -14px; left: -14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-circle,
+  .hero-circle-ring,
+  .hero-circle-pill { animation: none !important; }
+  .hero-circle__img,
+  .hero-product-card { transition: none !important; opacity: 1 !important; transform: none !important; }
+}
+
+
+/* ================================================================
+   MÓDULO DE REPORTES
+   ================================================================ */
+
+/* Cifra principal de cada KPI. Sin tabular-nums a propósito: a este
+   tamaño los dígitos de ancho fijo dejan huecos entre números. */
+.report-kpi-valor {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+/* Chip de variación contra el período anterior */
+.report-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.report-delta--sube   { background: #DCFCE7; color: #15803D; }
+.report-delta--baja   { background: #FEE2E2; color: #B91C1C; }
+.report-delta--neutro { background: var(--primary-softer); color: var(--text-muted); }
+
+[data-theme='dark'] .report-delta--sube { background: rgba(34, 197, 94, 0.18);  color: #4ADE80; }
+[data-theme='dark'] .report-delta--baja { background: rgba(239, 68, 68, 0.18);  color: #F87171; }
+
+/* Tabla gemela de los gráficos: cifras alineadas, por eso sí tabular-nums */
+.report-tabla { font-size: 0.85rem; }
+.report-tabla thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+.report-tabla td.text-end,
+.report-tabla th.text-end { font-variant-numeric: tabular-nums; }
+
+.min-w-0 { min-width: 0; }
+
+/* ── Impresión del reporte (botón "Imprimir" → PDF del navegador) ── */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+
+  body { background: #fff !important; }
+
+  /* Fuera todo lo que no es contenido del informe */
+  .sidebar-admin,
+  .no-print { display: none !important; }
+
+  .report-page { padding: 0 !important; max-width: 100% !important; }
+
+  /* El banner del panel tiene degradado oscuro: en papel se gasta el tóner
+     y el texto blanco desaparece. */
+  .report-page .admin-page-header {
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0 0 0.75rem !important;
+    border-bottom: 2px solid #111 !important;
+  }
+  .report-page .admin-page-header__title,
+  .report-page .admin-page-header__sub { color: #111 !important; }
+  .report-page .admin-badge {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .report-page .card {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  /* Que ninguna tarjeta se parta entre dos hojas */
+  .page-break-avoid { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Los gráficos se imprimen con sus colores, no en gris */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+
+/* ================================================================
+   DASHBOARD ADMIN
+   Colores por variable, no escritos a mano: la versión anterior tenía
+   #1a1a2e, #f9fafb y #f3f4f6 incrustados y quedaba ilegible en modo oscuro.
+   ================================================================ */
+
+.dashboard-stat__valor {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.dashboard-quick-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--primary-softer);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.dashboard-quick-link:hover {
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.dashboard-divider { border-top: 1px solid var(--border); }
+
+.dashboard-producto {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--primary-softer);
+  transition: var(--transition);
+}
+
+.dashboard-producto:hover { box-shadow: var(--shadow-sm); }
+
+/* Tarjetas de pedido y línea de tiempo: mismas superficies que el resto */
+[data-theme='dark'] .order-card-2 {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: var(--border);
+}
+[data-theme='dark'] .order-card-2__progress { background: var(--border); }
+[data-theme='dark'] .activity-timeline__item { border-bottom-color: var(--border); }

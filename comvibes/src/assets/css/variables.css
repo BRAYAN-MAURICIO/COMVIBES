@@ -1,0 +1,64 @@
+:root {
+  /* Color — misma paleta ya validada, sin cambios */
+  --primary: #1D4ED8;
+  --primary-dark: #1E40AF;
+  --primary-light: #2563EB;
+  --primary-softer: #EFF4FF; /* fondo suave para acentos, badges, hover */
+
+  --bg: #F1F5F9;
+  --white: #FFFFFF;
+
+  --text: #333333;
+  --text-muted: #6B7280;
+  --border: #D1D5DB;
+
+  --success: #22C55E;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+
+  /* Texto/íconos sobre fondos de color (sidebar, avatares, hero) —
+     siempre blanco, sin importar el tema, porque esos fondos (--primary,
+     gradientes oscuros) no cambian entre claro/oscuro. */
+  --on-primary: #FFFFFF;
+
+  /* Radios — escala consistente en vez de un único valor fijo */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+
+  /* Sombras — 3 niveles de elevación reutilizables */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
+
+  /* Transición estándar para hovers/focos */
+  --transition: all 0.2s ease;
+
+  /* Tipografía — declarada aquí porque la guía de estilos (sección 5.3
+     del documento del proyecto) la define como parte del sistema de diseño,
+     igual que los colores. */
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Roboto', sans-serif;
+}
+
+/* ============================================================
+   Modo oscuro — mismos nombres de variable, valores distintos.
+   Se activa con [data-theme="dark"] en <html>, controlado por
+   ThemeContext (toggle en el Navbar + localStorage).
+   El azul de marca (--primary) se mantiene igual en ambos modos
+   para que la identidad visual no cambie, solo el "lienzo".
+   ============================================================ */
+[data-theme='dark'] {
+  --primary-softer: #1E293B;
+
+  --bg: #0F172A;
+  --white: #1E293B;
+
+  --text: #E2E8F0;
+  --text-muted: #94A3B8;
+  --border: #334155;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
