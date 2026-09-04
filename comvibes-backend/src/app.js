@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const morgan = require('morgan')
+const helmet = require('helmet')
 require('dotenv').config()
 
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler')
@@ -24,6 +25,21 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
 
+// FIX (RA.05 - recomendación instructor): helmet fija cabeceras HTTP de
+// seguridad estándar (HSTS, X-Frame-Options, X-Content-Type-Options, etc.).
+// - contentSecurityPolicy: off. Este backend es una API JSON, no sirve HTML
+//   propio; la CSP por defecto de helmet está pensada para páginas
+//   renderizadas y aquí solo generaría ruido sin beneficio real.
+// - crossOriginResourcePolicy: 'cross-origin'. Las imágenes de /uploads las
+//   consume el frontend React desde OTRO origen (Vite en :5173, o el dominio
+//   de producción); la política por defecto de helmet ('same-origin')
+//   bloquearía justamente eso.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+)
 app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 // FIX #11: 'dev' es verboso con colores ANSI — útil localmente, ruido en logs de producción.

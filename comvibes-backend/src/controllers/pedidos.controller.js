@@ -155,6 +155,10 @@ const createPedido = asyncHandler(async (req, res) => {
   const [items] = await pool.query(SELECT_ITEMS, [idCar])
   if (items.length === 0) return fail(res, 'Tu carrito está vacío.', 400)
 
+  // Chequeo temprano fuera de la transacción: filtra el caso obvio rápido y
+  // barato (sin abrir conexión), pero por sí solo NO evita sobreventa si dos
+  // clientes hacen checkout casi al mismo tiempo — ver el bloqueo de filas
+  // más abajo, dentro de la transacción, que es la protección real.
   const sinStock = items.find((i) => i.cantidad > i.stock_disponible)
   if (sinStock) return fail(res, `No hay suficiente stock de "${sinStock.nombre}".`, 400)
 
@@ -167,6 +171,32 @@ const createPedido = asyncHandler(async (req, res) => {
   try {
     await conn.beginTransaction()
 
+    // FIX (RA.04 - Oportunidad de mejora, Módulo 2): re-validar y bloquear el
+    // stock DENTRO de la transacción, no solo con la lectura de más arriba.
+    // Sin esto, dos checkouts concurrentes pueden leer el mismo
+    // stock_disponible antes de que ninguno haga commit y ambos pasar la
+    // validación, vendiendo más unidades de las que existen (sobreventa).
+    //
+    // SELECT ... FOR UPDATE bloquea la fila de inventario hasta el
+    // commit/rollback: un segundo checkout que toque el mismo producto
+    // espera a que el primero termine y ve el stock ya actualizado.
+    // Se recorren los items ordenados por idPro para que, si dos pedidos
+    // comparten varios productos, ambos pidan los bloqueos en el mismo
+    // orden y no se produzca un deadlock cruzado.
+    const itemsOrdenados = [...items].sort((a, b) => a.idPro - b.idPro)
+    for (const item of itemsOrdenados) {
+      const [invRows] = await conn.query(
+        'SELECT cantidad_disp FROM inventario WHERE idPro = ? FOR UPDATE',
+        [item.idPro]
+      )
+      const stockActual = invRows[0]?.cantidad_disp ?? 0
+      if (item.cantidad > stockActual) {
+        const err = new Error(`No hay suficiente stock de "${item.nombre}".`)
+        err.status = 400
+        throw err
+      }
+    }
+
     const [pedidoResult] = await conn.query(
       "INSERT INTO pedidos (idUsu, estado, total) VALUES (?, 'Pendiente', ?)",
       [req.user.idUsu, total]
@@ -178,9 +208,18 @@ const createPedido = asyncHandler(async (req, res) => {
         'INSERT INTO detallepedido (idPed, idPro, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
         [idPed, item.idPro, item.cantidad, item.precio]
       )
-      await conn.query('UPDATE inventario SET cantidad_disp = cantidad_disp - ? WHERE idPro = ?', [
-        item.cantidad, item.idPro,
-      ])
+      // Condición cantidad_disp >= ? en el WHERE: red de seguridad adicional
+      // ante cualquier otra ruta que pudiera descontar stock sin pasar por el
+      // FOR UPDATE de arriba (defensa en profundidad).
+      const [updResult] = await conn.query(
+        'UPDATE inventario SET cantidad_disp = cantidad_disp - ? WHERE idPro = ? AND cantidad_disp >= ?',
+        [item.cantidad, item.idPro, item.cantidad]
+      )
+      if (updResult.affectedRows === 0) {
+        const err = new Error(`No hay suficiente stock de "${item.nombre}".`)
+        err.status = 400
+        throw err
+      }
     }
 
     // Pago: se asume completado al confirmar (igual que el CheckoutFlow actual del frontend)
