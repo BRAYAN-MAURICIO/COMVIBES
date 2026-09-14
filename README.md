@@ -11,6 +11,15 @@ El repositorio contiene dos aplicaciones que corren por separado:
 | `comvibes/` | Frontend — React + Vite + Bootstrap 5 | 5173 |
 | `comvibes-backend/` | API REST — Node.js + Express + MySQL | 4000 |
 
+## Diseño
+
+Mockups de las pantallas (Genially):
+https://view.genially.com/68adf10416483e109bd8367
+
+El esquema de la base de datos vive únicamente en `comvibes-backend/sql/`
+(`Comvibes_db_final.sql` más las migraciones numeradas `02_` y `03_`). Esa
+carpeta es la fuente de verdad del esquema; no hay copias en la raíz.
+
 ## Stack
 
 **Frontend:** React 19, Vite, React Router 7, Bootstrap 5, Axios, Recharts,

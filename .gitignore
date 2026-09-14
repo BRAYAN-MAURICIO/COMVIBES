@@ -55,3 +55,14 @@ desktop.ini
 # El código va versionado en el repo, no dentro de un .zip
 *.zip
 *.rar
+
+# ── Artefactos obsoletos retirados en la refactorización QA ──────────
+# (No Conformidad 4 de la auditoría cruzada del 07/09/2026)
+# Estos archivos se commitearon antes de existir la regla *.zip, así que
+# la regla sola no bastaba: hubo que sacarlos con `git rm --cached`.
+#   comvibes_.zip     → duplicaba el código fuente que ya está en el repo
+#   Comvibes_bas.sql  → redundante con comvibes-backend/sql/ (fuente única)
+#   Mockups           → archivo sin extensión con una URL; movida al README
+comvibes_.zip
+Comvibes_bas.sql
+Mockups
