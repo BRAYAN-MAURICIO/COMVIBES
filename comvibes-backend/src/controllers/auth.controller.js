@@ -68,67 +68,114 @@ async function validarCodigo({ tabla, pk, idUsu, codigo }) {
 // el usuario debe ingresar el código que le llega por correo. Si el envío
 // del correo falla, se hace rollback y no queda una cuenta huérfana que
 // nunca podría activarse.
-const register = asyncHandler(async (req, res) => {
-  const { nombre, apellido, correo, password, documento_id } = req.body
+//
+// El flujo está dividido en cuatro pasos con una sola responsabilidad cada
+// uno (validar / verificar duplicado / crear / emitir código); register()
+// queda como orquestador. Los cuatro pasos corren dentro de la MISMA
+// transacción porque reciben la conexión `conn` como parámetro.
 
+/**
+ * Valida el payload de registro.
+ * @returns {string|null} mensaje de error, o null si el payload es válido.
+ */
+function validarPayloadRegistro({ nombre, apellido, correo, password }) {
   if (!nombre || !apellido || !correo || !password) {
-    return fail(res, 'nombre, apellido, correo y password son obligatorios.')
+    return 'nombre, apellido, correo y password son obligatorios.'
   }
   if (String(password).length < 8) {
-    return fail(res, 'La contraseña debe tener mínimo 8 caracteres.')
+    return 'La contraseña debe tener mínimo 8 caracteres.'
   }
+  return null
+}
+
+/**
+ * Comprueba si el correo ya tiene una credencial asociada.
+ * @returns {null|{mensaje:string, estado:number, extra:object}} null si el
+ *          correo está libre; si no, la respuesta de conflicto que aplica.
+ */
+async function verificarCorreoExistente(conn, correo) {
+  const [existing] = await conn.query(
+    'SELECT idCred, correo_verificado FROM credencial WHERE correo = ?',
+    [correo]
+  )
+  if (existing.length === 0) return null
+
+  // Si la cuenta existe pero nunca se verificó, guiamos al usuario en vez
+  // de dejarlo bloqueado sin saber qué hacer.
+  if (!existing[0].correo_verificado) {
+    return {
+      mensaje:
+        'Ya existe una cuenta con ese correo pendiente de verificar. Te enviamos un código nuevo desde la pantalla de verificación.',
+      estado: 409,
+      extra: { requiereVerificacion: true },
+    }
+  }
+  // Sin `extra`: fail() omite `details` cuando llega undefined, igual que antes.
+  return {
+    mensaje: 'Ya existe una cuenta registrada con ese correo.',
+    estado: 409,
+  }
+}
+
+/**
+ * Inserta usuario + credencial + rol 'cliente' + carrito vacío.
+ * @returns {Promise<number>} idUsu del usuario creado.
+ */
+async function crearUsuarioYCredencial(conn, { nombre, apellido, correo, password, documento_id }) {
+  const [userResult] = await conn.query(
+    'INSERT INTO usuarios (nombre, apellido, documento_id) VALUES (?, ?, ?)',
+    [nombre, apellido, documento_id || null]
+  )
+  const idUsu = userResult.insertId
+
+  const hash = await bcrypt.hash(password, 10)
+  await conn.query(
+    'INSERT INTO credencial (idUsu, correo, usuario, contrasena_hash, correo_verificado) VALUES (?, ?, ?, ?, FALSE)',
+    [idUsu, correo, correo, hash]
+  )
+
+  const [rolCliente] = await conn.query("SELECT idRol FROM roles WHERE nombre = 'cliente' LIMIT 1")
+  if (rolCliente.length === 0) throw new Error("No existe el rol 'cliente' en la tabla roles.")
+  await conn.query('INSERT INTO usuariorol (idUsu, idRol) VALUES (?, ?)', [idUsu, rolCliente[0].idRol])
+
+  // Carrito vacío listo desde el registro, para que CartContext siempre tenga dónde escribir.
+  await conn.query('INSERT INTO carrito (idUsu) VALUES (?)', [idUsu])
+
+  return idUsu
+}
+
+/**
+ * Genera el código de 6 dígitos, guarda solo su hash y lo envía por correo.
+ * El envío va ANTES del commit: si el correo no sale, el rollback del
+ * orquestador impide que quede una cuenta que nunca podría activarse.
+ */
+async function emitirCodigoVerificacion(conn, { idUsu, correo, nombre }) {
+  const codigo = generarCodigo()
+  await conn.query(
+    'INSERT INTO email_verifications (idUsu, codigo_hash, expira_en) VALUES (?, ?, ?)',
+    [idUsu, await hashCodigo(codigo), fechaExpiracion()]
+  )
+  await mailer.enviarCodigoVerificacion(correo, nombre, codigo)
+}
+
+const register = asyncHandler(async (req, res) => {
+  const errorValidacion = validarPayloadRegistro(req.body)
+  if (errorValidacion) return fail(res, errorValidacion)
+
+  const { nombre, correo } = req.body
 
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
 
-    const [existing] = await conn.query(
-      'SELECT idCred, correo_verificado FROM credencial WHERE correo = ?',
-      [correo]
-    )
-    if (existing.length > 0) {
+    const conflicto = await verificarCorreoExistente(conn, correo)
+    if (conflicto) {
       await conn.rollback()
-      // Si la cuenta existe pero nunca se verificó, guiamos al usuario en vez
-      // de dejarlo bloqueado sin saber qué hacer.
-      if (!existing[0].correo_verificado) {
-        return fail(
-          res,
-          'Ya existe una cuenta con ese correo pendiente de verificar. Te enviamos un código nuevo desde la pantalla de verificación.',
-          409,
-          { requiereVerificacion: true }
-        )
-      }
-      return fail(res, 'Ya existe una cuenta registrada con ese correo.', 409)
+      return fail(res, conflicto.mensaje, conflicto.estado, conflicto.extra)
     }
 
-    const [userResult] = await conn.query(
-      'INSERT INTO usuarios (nombre, apellido, documento_id) VALUES (?, ?, ?)',
-      [nombre, apellido, documento_id || null]
-    )
-    const idUsu = userResult.insertId
-
-    const hash = await bcrypt.hash(password, 10)
-    await conn.query(
-      'INSERT INTO credencial (idUsu, correo, usuario, contrasena_hash, correo_verificado) VALUES (?, ?, ?, ?, FALSE)',
-      [idUsu, correo, correo, hash]
-    )
-
-    const [rolCliente] = await conn.query("SELECT idRol FROM roles WHERE nombre = 'cliente' LIMIT 1")
-    if (rolCliente.length === 0) throw new Error("No existe el rol 'cliente' en la tabla roles.")
-    await conn.query('INSERT INTO usuariorol (idUsu, idRol) VALUES (?, ?)', [idUsu, rolCliente[0].idRol])
-
-    // Carrito vacío listo desde el registro, para que CartContext siempre tenga dónde escribir.
-    await conn.query('INSERT INTO carrito (idUsu) VALUES (?)', [idUsu])
-
-    const codigo = generarCodigo()
-    await conn.query(
-      'INSERT INTO email_verifications (idUsu, codigo_hash, expira_en) VALUES (?, ?, ?)',
-      [idUsu, await hashCodigo(codigo), fechaExpiracion()]
-    )
-
-    // El envío va ANTES del commit: si el correo no sale, no dejamos una
-    // cuenta creada que el usuario jamás podría activar.
-    await mailer.enviarCodigoVerificacion(correo, nombre, codigo)
+    const idUsu = await crearUsuarioYCredencial(conn, req.body)
+    await emitirCodigoVerificacion(conn, { idUsu, correo, nombre })
 
     await conn.commit()
 
