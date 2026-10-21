@@ -90,13 +90,18 @@ function ProductManagement() {
   const categoriaNombre = (idCat) =>
     categorias.find((c) => c.idCat === Number(idCat))?.nombre || 'Sin categoría'
 
+  // categorias va en las dependencias: si las categorías llegan después que
+  // los productos, la búsqueda por nombre de categoría debe recalcularse
+  // (antes se quedaba con la lista vacía y no encontraba nada).
   const filteredProductos = useMemo(() => {
     if (!search.trim()) return productos
     const term = search.trim().toLowerCase()
+    const nombreCat = (idCat) =>
+      categorias.find((c) => c.idCat === Number(idCat))?.nombre || 'Sin categoría'
     return productos.filter(
-      (p) => p.nombre.toLowerCase().includes(term) || categoriaNombre(p.idCat).toLowerCase().includes(term)
+      (p) => p.nombre.toLowerCase().includes(term) || nombreCat(p.idCat).toLowerCase().includes(term)
     )
-  }, [productos, search])
+  }, [productos, search, categorias])
 
   const resumen = useMemo(() => ({
     total: productos.length,

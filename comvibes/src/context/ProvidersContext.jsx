@@ -1,30 +1,18 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as proveedoresApi from '../api/proveedores'
 import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const ProvidersContext = createContext(null)
 
 function ProvidersProvider({ children }) {
-  const { isAdmin } = useAuth()
-  const [proveedores, setProveedores] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchProveedores = useCallback(async () => {
-    if (!isAdmin) {
-      setProveedores([])
-      return
-    }
-    setLoading(true)
-    try {
-      setProveedores(await proveedoresApi.getProveedores())
-    } finally {
-      setLoading(false)
-    }
-  }, [isAdmin])
-
-  useEffect(() => {
-    fetchProveedores()
-  }, [fetchProveedores])
+  const { isAdmin, user } = useAuth()
+  // Proveedores es 100% back-office: solo se piden con sesión de admin.
+  const { datos: proveedores, setDatos: setProveedores, cargando: loading } = useCarga(proveedoresApi.getProveedores, {
+    habilitado: isAdmin,
+    clave: user?.idUsu,
+    inicial: [],
+  })
 
   const addProvider = async (datos) => {
     const nuevo = await proveedoresApi.createProveedor(datos)

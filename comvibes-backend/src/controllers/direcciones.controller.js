@@ -33,7 +33,7 @@ const createDireccion = asyncHandler(async (req, res) => {
     const [result] = await conn.query(
       `INSERT INTO direcciones (idUsu, etiqueta, direccion, departamento, ciudad, pais, codigo_postal, telefono, predeterminada)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.user.idUsu, etiqueta || null, direccion, departamento || null, ciudad, pais, codigo_postal || null, telefono || null, seraDefault]
+      [req.user.idUsu, etiqueta || null, direccion, departamento || null, ciudad, pais || 'Colombia', codigo_postal || null, telefono || null, seraDefault]
     )
 
     await conn.commit()

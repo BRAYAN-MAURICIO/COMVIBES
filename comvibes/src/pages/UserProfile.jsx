@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useToast } from '../context/ToastContext'
 import { Pencil, Plus, MapPin, Camera, Eye, EyeOff, Lock } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import * as usuariosApi from '../api/usuarios'
 import { useAddresses } from '../context/AddressesContext'
-import { required, isEmail, onlyLetters, onlyNumbers, runValidations } from '../utils/validators'
+import { required, onlyLetters, runValidations } from '../utils/validators'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import AddressForm from '../components/addresses/AddressForm'
 import AddressCard from '../components/addresses/AddressCard'
@@ -21,19 +21,14 @@ function UserProfile() {
 
   // ─── Imagen de perfil ───────────────────────────────────────────────────────
   const fileRef = useRef(null)
-  // Se inicializa con la foto del usuario actual (si la tiene guardada).
-  const [avatar, setAvatar] = useState(() =>
-    user?.idUsu ? localStorage.getItem(avatarKey(user.idUsu)) || null : null
-  )
-
-  // Cuando el usuario cambia (login / refresco), cargar su avatar correspondiente.
-  useEffect(() => {
-    if (user?.idUsu) {
-      setAvatar(localStorage.getItem(avatarKey(user.idUsu)) || null)
-    } else {
-      setAvatar(null)
-    }
-  }, [user?.idUsu])
+  // La foto se lee de localStorage para el usuario de la sesión. Si cambia el
+  // usuario (login/refresco) se lee la suya en el mismo render, sin useEffect.
+  // `avatarSubido` guarda la que se acaba de subir, asociada a su dueño.
+  const [avatarSubido, setAvatarSubido] = useState({ idUsu: null, src: null })
+  const avatar =
+    avatarSubido.idUsu && avatarSubido.idUsu === user?.idUsu
+      ? avatarSubido.src
+      : (user?.idUsu ? localStorage.getItem(avatarKey(user.idUsu)) || null : null)
 
   const handleAvatarClick = () => fileRef.current?.click()
 
@@ -48,7 +43,7 @@ function UserProfile() {
     reader.onload = (ev) => {
       const base64 = ev.target.result
       localStorage.setItem(avatarKey(user.idUsu), base64)
-      setAvatar(base64)
+      setAvatarSubido({ idUsu: user.idUsu, src: base64 })
       toast.success('Foto de perfil actualizada')
     }
     reader.readAsDataURL(file)
@@ -64,8 +59,12 @@ function UserProfile() {
   const [errors, setErrors] = useState({})
   const [savingProfile, setSavingProfile] = useState(false)
 
-  // Sincronizar si user cambia (ej. login)
-  useEffect(() => {
+  // Sincronizar si user cambia (ej. login o tras guardar el perfil). Se
+  // compara con el usuario anterior durante el render, patrón recomendado por
+  // React en vez de un useEffect que pintaba primero los datos viejos.
+  const [usuarioPrevio, setUsuarioPrevio] = useState(user)
+  if (user !== usuarioPrevio) {
+    setUsuarioPrevio(user)
     if (user) {
       setForm(prev => ({
         ...prev,
@@ -74,7 +73,7 @@ function UserProfile() {
         correo:   user.correo   || prev.correo,
       }))
     }
-  }, [user])
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target

@@ -30,12 +30,23 @@ FLUSH PRIVILEGES;
 ## 3. Cargar la base de datos
 
 **Un solo archivo, todo incluido.** El archivo `sql/Comvibes_db_final.sql` contiene
-las 25 tablas ya con todas las columnas correctas, datos de prueba, proveedores,
+las 26 tablas ya con todas las columnas correctas, datos de prueba, proveedores,
 catálogo completo y métodos de pago — listo para importar directamente.
 
 ```bash
 mysql -u root --default-character-set=utf8mb4 < sql/Comvibes_db_final.sql
 ```
+
+Después aplica las migraciones, en orden (todas son idempotentes):
+
+```bash
+mysql -u root -p combives_db < sql/02_email_real.sql
+mysql -u root -p combives_db < sql/03_soporte_seguimiento.sql
+mysql -u root -p combives_db < sql/04_integridad_fk.sql
+mysql -u root -p combives_db < sql/05_auditoria_admin.sql
+```
+
+Al arrancar, el servidor revisa que las cuatro estén aplicadas y avisa en consola cuál falta.
 
 > **Nota:** El archivo `sql/01_schema_updates.sql` ya no es necesario — todo está
 > consolidado en el SQL final. Se mantiene en la carpeta solo como referencia.
@@ -128,11 +139,22 @@ Las rutas protegidas requieren header `Authorization: Bearer <token>` (lo devuel
 | Opiniones | `GET /api/opiniones/producto/:idPro` (público), `POST`, `DELETE /:id` |
 | Soporte (PQR) | `GET/POST /api/soporte`, `PATCH /:id/responder` (admin, envía correo), `PATCH /:id/estado` (admin) |
 | Reportes | `GET /api/reportes/resumen` (admin) |
+| Bitácora | `GET /api/auditoria?entidad=&idEntidad=&page=&limit=` (admin) |
 
 ## 8. Cómo funciona el checkout (`POST /api/pedidos`)
 
-Body: `{ "idDir": 1, "idMet": 1 }`. Toma lo que haya en el carrito del usuario
-autenticado y, en una sola transacción:
+Body: `{ "idDir": 1, "idMet": 1, "totalEsperado": 150000 }`. Toma lo que haya en
+el carrito del usuario autenticado, con el **precio vigente** de cada producto.
+
+Antes de abrir la transacción:
+
+- Si llega `totalEsperado` (el total que el cliente vio) y no coincide con el
+  calculado, responde **409** con `details.motivo = 'total_cambio'` y el detalle
+  actualizado. No se cobra nada; el frontend recarga el carrito y el cliente
+  vuelve a confirmar.
+- El método de pago debe existir y estar activo.
+
+Luego, en una sola transacción:
 
 1. Valida stock disponible de cada línea.
 2. Crea el `pedido` + `detallepedido`.
@@ -203,6 +225,45 @@ SMTP sería peor que no avisar al cliente.
 
 Requiere la migración `sql/03_soporte_seguimiento.sql`.
 
+## 8d. Validación de datos y bitácora
+
+Cada ruta que recibe datos pasa primero por `middleware/validar.js`, con los
+esquemas de `src/validation/esquemas.js` (zod). Un dato inválido responde 400
+con el primer error como `message` y la lista completa en `details.campos`.
+Los campos que el esquema no declara se descartan antes de llegar al
+controlador. Los límites de longitud son los de las columnas del SQL: si cambias
+el tamaño de una columna, cámbialo también en el esquema.
+
+Las acciones de un admin (estados de pedidos, precios, stock, roles, bloqueos,
+PQR, categorías, proveedores y métodos de pago) quedan en la tabla
+`auditoria_admin` con el valor anterior y el nuevo. Se consultan en
+**Panel admin → Bitácora** o en `GET /api/auditoria`.
+
+## 8e. Pruebas y lint
+
+```bash
+npm run lint                # ESLint
+npm test                    # pruebas que no necesitan MySQL
+npm run test:db:preparar    # crea combives_db_test desde sql/ (borra la anterior)
+npm run test:db             # todas las pruebas, incluidas las de integración
+npm run test:cobertura      # lo mismo, con reporte de cobertura en coverage/
+```
+
+Las pruebas **siempre** usan la base `combives_db_test` (o la que diga
+`DB_NAME_TEST`, que debe terminar en `_test`), nunca la de desarrollo, aunque
+el `.env` apunte a otra: lo fuerza `tests/setup.js`. Toman `DB_HOST`,
+`DB_USER` y `DB_PASSWORD` del mismo `.env`.
+
+| Archivo | Qué cubre |
+|---|---|
+| `tests/auth.test.js`, `tests/productos.test.js` | Validaciones y permisos sin base de datos |
+| `tests/registro_checkout.integration.test.js` | Registro con verificación de correo, checkout completo, compra simultánea de la última unidad |
+| `tests/fase1.integration.test.js` | Cuentas bloqueadas, cancelar pedidos, integridad referencial |
+| `tests/fase2.integration.test.js` | Validación de datos, precio vigente, límite de PQR, bitácora, productos inactivos |
+
+En GitHub, cada push a `main` corre lint, pruebas y build en MySQL 8.0 y 9
+(`.github/workflows/ci.yml`).
+
 ## 9. Conectar el frontend
 
 En el proyecto React (Vite), crea un `.env`:
@@ -238,5 +299,7 @@ comvibes-backend/
 ├── sql/01_schema_updates.sql  # ejecutar DESPUÉS del SQL original
 ├── sql/02_email_real.sql      # verificación de correo + códigos hasheados
 ├── sql/03_soporte_seguimiento.sql # atendido_por + fecha_respuesta en PQR
+├── sql/04_integridad_fk.sql   # envios.idDir SET NULL + password_changed_at
+├── sql/05_auditoria_admin.sql # bitácora de acciones de admin (GET /api/auditoria)
 └── scripts/hashPasswords.js   # npm run seed:hash
 ```

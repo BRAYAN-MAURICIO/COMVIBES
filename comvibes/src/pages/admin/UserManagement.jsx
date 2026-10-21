@@ -1,24 +1,16 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useToast } from '../../context/ToastContext'
 import { Search } from 'lucide-react'
 import ConfirmModal from '../../components/modals/ConfirmModal'
 import * as usuariosApi from '../../api/usuarios'
+import { useCarga } from '../../hooks/useCarga'
 
 function UserManagement() {
   const toast = useToast()
-  const [usuarios, setUsuarios] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { datos: usuarios, setDatos: setUsuarios, cargando: loading, error } = useCarga(usuariosApi.getUsuarios, { inicial: [] })
   const [blockTarget, setBlockTarget] = useState(null)
   const [search, setSearch] = useState('')
 
-  const fetchUsuarios = useCallback(async () => {
-    setLoading(true)
-    try { setUsuarios(await usuariosApi.getUsuarios()) }
-    catch (err) { toast.error('No se pudieron cargar los usuarios', err.message) }
-    finally { setLoading(false) }
-  }, [toast])
-
-  useEffect(() => { fetchUsuarios() }, [fetchUsuarios])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return usuarios
@@ -72,6 +64,12 @@ function UserManagement() {
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
+
+      {error && (
+        <div className='alert alert-danger py-2' role='alert'>
+          No se pudieron cargar los usuarios: {error.message}
+        </div>
+      )}
 
       {/* Table */}
       <div className='admin-table-wrapper'>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Share2, Mail, Phone, Clock, MessageCircle, Play, Camera } from 'lucide-react'
+import { Mail, Phone, Clock, MessageCircle, Play, Camera } from 'lucide-react'
 
 const SOCIAL = [
   { Icon: Camera,        href: 'https://instagram.com/comvibes', label: 'Instagram' },

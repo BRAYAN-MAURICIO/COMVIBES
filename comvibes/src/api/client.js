@@ -36,6 +36,16 @@ api.interceptors.response.use(
       }
     }
 
+    // Cuenta bloqueada o inactivada por un admin mientras tenía la sesión
+    // abierta: el backend responde 403 con details.estadoCuenta. La sesión
+    // ya no sirve para nada, así que se cierra igual que un 401.
+    if (status === 403 && hadToken && error.response?.data?.details?.estadoCuenta) {
+      localStorage.removeItem(TOKEN_KEY)
+      if (window.location.pathname !== '/login') {
+        window.location.assign('/login?cuenta=inactiva')
+      }
+    }
+
     const message = error.response?.data?.message || error.message || 'Error de red con el servidor.'
     // Conservamos `details` y `status`: el flujo de verificación de correo
     // necesita distinguir un 403 "falta verificar" de un 401 de credenciales.

@@ -19,7 +19,7 @@ describe('POST /api/auth/register', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.success).toBe(false)
-    expect(res.body.message).toMatch(/obligatorios/i)
+    expect(res.body.message).toMatch(/obligatorio/i)
   })
 
   it('rechaza una contraseña de menos de 8 caracteres', async () => {
@@ -42,7 +42,7 @@ describe('POST /api/auth/login', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.success).toBe(false)
-    expect(res.body.message).toMatch(/obligatorios/i)
+    expect(res.body.message).toMatch(/obligatorio/i)
   })
 })
 

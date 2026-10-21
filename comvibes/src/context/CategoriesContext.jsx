@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as categoriasApi from '../api/categorias'
+import { useCarga } from '../hooks/useCarga'
 
 const CategoriesContext = createContext(null)
 
@@ -7,21 +8,9 @@ const CategoriesContext = createContext(null)
 // en 5 páginas distintas. Se centraliza acá para que las categorías vengan
 // de la BD real y un admin pueda crear/editar/borrar sin tocar código.
 function CategoriesProvider({ children }) {
-  const [categorias, setCategorias] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchCategorias = useCallback(async () => {
-    setLoading(true)
-    try {
-      setCategorias(await categoriasApi.getCategorias())
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchCategorias()
-  }, [fetchCategorias])
+  const { datos: categorias, setDatos: setCategorias, cargando: loading } = useCarga(categoriasApi.getCategorias, {
+    inicial: [],
+  })
 
   const createCategory = async (payload) => {
     const created = await categoriasApi.createCategoria(payload)

@@ -10,16 +10,14 @@ const AuthContext = createContext(null)
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Solo hay algo que comprobar si quedó un token guardado; sin token la
+  // sesión ya está resuelta (anónima) desde el primer render.
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem(TOKEN_KEY)))
 
   // Al montar, si hay un token guardado, valida la sesión contra /auth/me
   // en vez de confiar ciegamente en lo que había en localStorage.
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) {
-      setLoading(false)
-      return
-    }
+    if (!localStorage.getItem(TOKEN_KEY)) return
     authApi
       .getMe()
       .then((usuario) => setUser(usuario))

@@ -3,6 +3,7 @@ const { ok, created, fail } = require('../utils/response')
 const asyncHandler = require('../utils/asyncHandler')
 const { crearNotificacion } = require('./notificaciones.controller')
 const mailer = require('../utils/mailer')
+const { registrar } = require('../utils/auditoria')
 
 const SELECT_TICKETS = `
   SELECT t.idTick, t.idUsu,
@@ -106,6 +107,10 @@ const responderTicket = asyncHandler(async (req, res) => {
   )
 
   const ticket = await getTicket(req.params.id)
+  await registrar(pool, req, {
+    accion: 'pqr.responder', entidad: 'pqr', idEntidad: Number(req.params.id),
+    antes: { estado: previo.estado }, despues: { estado },
+  })
 
   // Los tickets de invitados tienen idUsu = null: no hay a quién notificar
   // dentro de la app, pero sí hay correo al que escribirle.
@@ -166,6 +171,12 @@ const cambiarEstadoTicket = asyncHandler(async (req, res) => {
   )
 
   const ticket = await getTicket(req.params.id)
+  if (previo.estado !== estado) {
+    await registrar(pool, req, {
+      accion: 'pqr.estado', entidad: 'pqr', idEntidad: Number(req.params.id),
+      antes: { estado: previo.estado }, despues: { estado },
+    })
+  }
 
   let correo_enviado = false
   let aviso_correo = null

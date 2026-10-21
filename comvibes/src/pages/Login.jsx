@@ -10,6 +10,7 @@ function Login() {
   const { login } = useAuth()
   const [searchParams] = useSearchParams()
   const sessionExpired = searchParams.get('expired') === '1'
+  const cuentaInactiva = searchParams.get('cuenta') === 'inactiva'
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -76,6 +77,12 @@ function Login() {
         <div className='alert alert-warning py-2 mb-3 small d-flex align-items-center gap-2' role='alert'>
           <span>⏱️</span>
           <span>Tu sesión expiró. Ingresa de nuevo para continuar.</span>
+        </div>
+      )}
+      {cuentaInactiva && (
+        <div className='alert alert-danger py-2 mb-3 small d-flex align-items-center gap-2' role='alert'>
+          <span>🔒</span>
+          <span>Tu cuenta fue desactivada. Si crees que es un error, escríbenos desde Soporte.</span>
         </div>
       )}
       <form onSubmit={handleSubmit} noValidate>

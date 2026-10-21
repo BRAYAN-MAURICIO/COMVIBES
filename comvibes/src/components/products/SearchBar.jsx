@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Search, X } from 'lucide-react'
 
 function SearchBar({ onSearch, placeholder = 'Buscar productos...', initialValue = '' }) {
   const [term, setTerm] = useState(initialValue)
 
-  // Sincroniza el input cuando el padre limpia los filtros externamente
-  useEffect(() => {
+  // Sincroniza el input cuando el padre limpia los filtros externamente.
+  // Se compara con el valor anterior durante el render (patrón recomendado
+  // por React) en vez de usar un useEffect, que pintaba primero el texto
+  // viejo y luego el nuevo.
+  const [initialPrevio, setInitialPrevio] = useState(initialValue)
+  if (initialValue !== initialPrevio) {
+    setInitialPrevio(initialValue)
     setTerm(initialValue)
-  }, [initialValue])
+  }
 
   const handleChange = (e) => {
     const value = e.target.value

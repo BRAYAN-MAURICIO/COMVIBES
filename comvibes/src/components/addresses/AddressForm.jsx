@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { required, onlyNumbers, runValidations } from '../../utils/validators'
 import { DEPARTAMENTOS, getMunicipios } from '../../data/colombia'
 
@@ -14,33 +14,25 @@ const emptyForm = {
 function AddressForm({ initialValues = {}, onSubmit, onCancel, submitLabel = 'Guardar dirección', hidePredeterminada = false }) {
   const [form, setForm] = useState({ ...emptyForm, ...initialValues })
   const [errors, setErrors] = useState({})
-  const [municipios, setMunicipios] = useState([])
-
-  // Cuando cambia el departamento, actualizar municipios y resetear ciudad
-  useEffect(() => {
-    if (form.departamento) {
-      const lista = getMunicipios(form.departamento)
-      setMunicipios(lista)
-      // Solo resetear ciudad si cambió el departamento (no en la carga inicial)
-      if (!initialValues.departamento || initialValues.departamento !== form.departamento) {
-        setForm(prev => ({ ...prev, ciudad: lista[0] || '' }))
-      }
-    } else {
-      setMunicipios([])
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.departamento])
-
-  // Cargar municipios iniciales si ya viene un departamento (editar)
-  useEffect(() => {
-    if (initialValues.departamento) {
-      setMunicipios(getMunicipios(initialValues.departamento))
-    }
-  }, [initialValues.departamento])
+  // Los municipios se derivan del departamento elegido: no hace falta
+  // guardarlos en estado ni sincronizarlos con un useEffect.
+  const municipios = useMemo(
+    () => (form.departamento ? getMunicipios(form.departamento) : []),
+    [form.departamento]
+  )
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+    setForm(prev => {
+      const siguiente = { ...prev, [name]: type === 'checkbox' ? checked : value }
+      // Al elegir otro departamento, la ciudad anterior ya no aplica: se
+      // propone el primer municipio del nuevo. Como esto solo pasa cuando la
+      // persona cambia el select, al editar una dirección no se pisa su ciudad.
+      if (name === 'departamento' && value !== prev.departamento) {
+        siguiente.ciudad = getMunicipios(value)[0] || ''
+      }
+      return siguiente
+    })
     setErrors(prev => ({ ...prev, [name]: '' }))
   }
 

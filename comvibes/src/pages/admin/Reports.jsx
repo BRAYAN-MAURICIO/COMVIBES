@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -11,6 +11,7 @@ import {
 import { useToast } from '../../context/ToastContext'
 import { formatCurrency } from '../../utils/formatters'
 import * as reportesApi from '../../api/reportes'
+import { useCarga } from '../../hooks/useCarga'
 
 // ── Fechas ──────────────────────────────────────────────────────────────────
 // El backend devuelve 'YYYY-MM-DD'. Se formatean partiendo la cadena en vez de
@@ -210,28 +211,21 @@ function Reports() {
   const [desde, setDesde] = useState(() => desplazar(-29))
   const [hasta, setHasta] = useState(hoyISO)
 
-  const [data, setData] = useState(null)
-  const [cargando, setCargando] = useState(true)   // primera carga: esqueleto
-  const [refrescando, setRefrescando] = useState(false) // recarga: se atenúa lo anterior
-  const [error, setError] = useState(null)
-  const primeraCarga = useRef(true)
+  // Cambiar el rango crea una `cargarVentas` nueva y useCarga pide el reporte.
+  // `intento` va como clave para que "Reintentar" vuelva a pedir el mismo rango.
+  const [intento, setIntento] = useState(0)
+  const reintentar = () => setIntento((n) => n + 1)
+  const cargarVentas = useCallback(() => reportesApi.getVentas({ desde, hasta }), [desde, hasta])
+  const { datos, cargando: pidiendo, error: errorCarga } = useCarga(cargarVentas, { clave: intento, inicial: null })
 
-  const cargar = useCallback(async () => {
-    if (primeraCarga.current) setCargando(true)
-    else setRefrescando(true)
-    setError(null)
-    try {
-      setData(await reportesApi.getVentas({ desde, hasta }))
-    } catch (err) {
-      setError(describirError(err))
-    } finally {
-      primeraCarga.current = false
-      setCargando(false)
-      setRefrescando(false)
-    }
-  }, [desde, hasta])
-
-  useEffect(() => { cargar() }, [cargar])
+  // Mientras llega el reporte de un rango nuevo se sigue mostrando el último
+  // que llegó (atenuado), en vez de volver al esqueleto en cada cambio.
+  const [ultimo, setUltimo] = useState(null)
+  if (datos && datos !== ultimo) setUltimo(datos)
+  const data = datos ?? ultimo
+  const cargando = pidiendo && !ultimo      // primera carga: esqueleto
+  const refrescando = pidiendo && !!ultimo  // recarga: se atenúa lo anterior
+  const error = errorCarga ? describirError(errorCarga) : null
 
   const aplicarPreset = (preset) => {
     const r = preset.rango()
@@ -263,7 +257,6 @@ function Reports() {
     [data]
   )
 
-  const maxProducto = data?.topProductos?.[0]?.monto || 0
   const maxCategoria = data?.porCategoria?.[0]?.monto || 0
 
   const rotularRango = data?.rango?.completo
@@ -310,7 +303,7 @@ function Reports() {
           <h5 className='fw-bold'>No se pudo cargar el reporte</h5>
           <p className='text-muted mb-1'>{error?.mensaje || 'El servidor no respondió.'}</p>
           {error?.pista && <p className='small text-muted'>{error.pista}</p>}
-          <button className='btn btn-primary btn-sm mx-auto' style={{ maxWidth: 180 }} onClick={cargar}>
+          <button className='btn btn-primary btn-sm mx-auto' style={{ maxWidth: 180 }} onClick={reintentar}>
             Reintentar
           </button>
         </div>
@@ -388,7 +381,7 @@ function Reports() {
             <strong className='d-block'>{error.mensaje}</strong>
             {error.pista && <span className='small'>{error.pista}</span>}
           </div>
-          <button className='btn btn-sm btn-outline-danger no-print flex-shrink-0' onClick={cargar}>Reintentar</button>
+          <button className='btn btn-sm btn-outline-danger no-print flex-shrink-0' onClick={reintentar}>Reintentar</button>
         </div>
       )}
 

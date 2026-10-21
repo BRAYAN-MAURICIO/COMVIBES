@@ -3,6 +3,7 @@ const { ok, created, fail } = require('../utils/response')
 const asyncHandler = require('../utils/asyncHandler')
 const { getOrCreateCarritoId, SELECT_ITEMS } = require('./carrito.controller')
 const { crearNotificacion } = require('./notificaciones.controller')
+const { registrar } = require('../utils/auditoria')
 
 function pad(num, size) {
   return String(num).padStart(size, '0')
@@ -192,7 +193,9 @@ async function validarCheckout(idUsu, idDir) {
   const [dirRows] = await pool.query('SELECT * FROM direcciones WHERE idDir = ? AND idUsu = ?', [idDir, idUsu])
   if (dirRows.length === 0) return { error: { mensaje: 'Dirección no válida.', estado: 400 } }
 
-  const total = items.reduce((acc, i) => acc + Number(i.precio) * i.cantidad, 0)
+  // i.precio es el precio VIGENTE del producto (ver SELECT_ITEMS en
+  // carrito.controller.js), no el que tenía cuando se agregó al carrito.
+  const total = Math.round(items.reduce((acc, i) => acc + Number(i.precio) * i.cantidad, 0) * 100) / 100
   return { idCar, items, total }
 }
 
@@ -287,13 +290,38 @@ async function vaciarCarrito(conn, idCar) {
 }
 
 const createPedido = asyncHandler(async (req, res) => {
-  const { idDir, idMet } = req.body
+  const { idDir, idMet, totalEsperado } = req.body
   if (!idDir || !idMet) return fail(res, 'idDir e idMet son obligatorios.')
 
   const idUsu = req.user.idUsu
   const checkout = await validarCheckout(idUsu, idDir)
   if (checkout.error) return fail(res, checkout.error.mensaje, checkout.error.estado)
   const { idCar, items, total } = checkout
+
+  // Auditoría ISO, H6: el cliente debe pagar exactamente lo que vio. Si entre
+  // que abrió el carrito y pagó cambió un precio, o la sincronización recortó
+  // una cantidad por falta de stock, el total ya no coincide: se frena la
+  // compra y se le devuelve el detalle actualizado para que lo confirme.
+  if (totalEsperado != null && Math.abs(total - totalEsperado) > 0.009) {
+    return fail(
+      res,
+      'El total de tu compra cambió desde que la revisaste (precios o disponibilidad). Revisa el carrito y confirma de nuevo.',
+      409,
+      {
+        motivo: 'total_cambio',
+        totalEsperado,
+        totalActual: total,
+        items: items.map((i) => ({ idPro: i.idPro, nombre: i.nombre, cantidad: i.cantidad, precio: Number(i.precio) })),
+      }
+    )
+  }
+
+  // El método de pago tiene que existir y estar activo: desactivarlo en
+  // Configuración lo quitaba del checkout, pero el API lo seguía aceptando.
+  const [metRows] = await pool.query('SELECT activo FROM metodospago WHERE idMet = ?', [idMet])
+  if (metRows.length === 0 || !metRows[0].activo) {
+    return fail(res, 'El método de pago seleccionado no está disponible.', 400)
+  }
 
   const conn = await pool.getConnection()
   let idPed
@@ -327,18 +355,96 @@ const createPedido = asyncHandler(async (req, res) => {
   return created(res, pedidoCompleto)
 })
 
+// ── Cambio de estado ────────────────────────────────────────────────────────
+// Auditoría ISO 2026-09-26, hallazgo H2. Antes cualquier estado podía pasar a
+// cualquier otro y cancelar no devolvía el stock: las unidades de un pedido
+// cancelado quedaban "vendidas" para siempre, y un pedido Cancelado podía
+// volver a Entregado y reaparecer en las ventas.
+//
+// Transiciones permitidas. Entregado y Cancelado son estados finales.
+// Pendiente ↔ En Camino se deja en ambos sentidos para que el admin pueda
+// corregir un clic equivocado antes de la entrega.
+const TRANSICIONES = {
+  Pendiente: ['En Camino', 'Cancelado'],
+  'En Camino': ['Pendiente', 'Entregado', 'Cancelado'],
+  Entregado: [],
+  Cancelado: [],
+}
+const ESTADOS_PEDIDO = Object.keys(TRANSICIONES)
+
+/** Devuelve al inventario las unidades de un pedido (dentro de `conn`). */
+async function reponerStock(conn, idPed) {
+  const [detalle] = await conn.query(
+    'SELECT idPro, cantidad FROM detallepedido WHERE idPed = ? ORDER BY idPro',
+    [idPed]
+  )
+  for (const item of detalle) {
+    await conn.query(
+      'UPDATE inventario SET cantidad_disp = cantidad_disp + ? WHERE idPro = ?',
+      [item.cantidad, item.idPro]
+    )
+  }
+}
+
 // PATCH /api/pedidos/:id/estado (admin) - dispara notificación al dueño del pedido
 const cambiarEstadoPedido = asyncHandler(async (req, res) => {
   const { estado } = req.body
-  const validos = ['Pendiente', 'En Camino', 'Entregado', 'Cancelado']
-  if (!validos.includes(estado)) return fail(res, `estado debe ser uno de: ${validos.join(', ')}`)
+  if (!ESTADOS_PEDIDO.includes(estado)) {
+    return fail(res, `estado debe ser uno de: ${ESTADOS_PEDIDO.join(', ')}`)
+  }
 
-  const [result] = await pool.query('UPDATE pedidos SET estado = ? WHERE idPed = ?', [estado, req.params.id])
-  if (result.affectedRows === 0) return fail(res, 'Pedido no encontrado.', 404)
+  const conn = await pool.getConnection()
+  let idUsu
+  try {
+    await conn.beginTransaction()
 
-  const [rows] = await pool.query('SELECT idUsu FROM pedidos WHERE idPed = ?', [req.params.id])
+    // FOR UPDATE: si dos admins cambian el mismo pedido a la vez, el segundo
+    // espera y ve el estado ya actualizado (evita reponer el stock dos veces).
+    const [rows] = await conn.query(
+      'SELECT idUsu, estado FROM pedidos WHERE idPed = ? FOR UPDATE',
+      [req.params.id]
+    )
+    if (rows.length === 0) {
+      await conn.rollback()
+      return fail(res, 'Pedido no encontrado.', 404)
+    }
+    const actual = rows[0].estado
+    idUsu = rows[0].idUsu
+
+    if (actual === estado) {
+      await conn.rollback()
+      return ok(res, await getPedidoCompleto(req.params.id))
+    }
+    if (!TRANSICIONES[actual].includes(estado)) {
+      await conn.rollback()
+      const permitidos = TRANSICIONES[actual]
+      return fail(
+        res,
+        permitidos.length
+          ? `Un pedido ${actual} solo puede pasar a: ${permitidos.join(', ')}.`
+          : `Un pedido ${actual} ya no puede cambiar de estado.`,
+        409,
+        { estadoActual: actual, permitidos }
+      )
+    }
+
+    await conn.query('UPDATE pedidos SET estado = ? WHERE idPed = ?', [estado, req.params.id])
+    if (estado === 'Cancelado') await reponerStock(conn, req.params.id)
+    await registrar(conn, req, {
+      accion: 'pedido.estado', entidad: 'pedido', idEntidad: Number(req.params.id),
+      antes: { estado: actual }, despues: { estado },
+    })
+
+    await conn.commit()
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
+
   await crearNotificacion({
-    idUsu: rows[0].idUsu,
+    idUsu,
     tipo: 'pedido',
     mensaje: `Tu pedido #${req.params.id} pasó a ${estado}.`,
     link: '/pedidos',
@@ -348,4 +454,6 @@ const cambiarEstadoPedido = asyncHandler(async (req, res) => {
   return ok(res, pedidoCompleto)
 })
 
-module.exports = { listPedidos, getPedido, createPedido, cambiarEstadoPedido, getPedidoCompleto }
+module.exports = {
+  listPedidos, getPedido, createPedido, cambiarEstadoPedido, getPedidoCompleto, TRANSICIONES,
+}

@@ -6,8 +6,20 @@ import { useOrders } from '../../context/OrdersContext'
 import { useEnvios } from '../../context/EnviosContext'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 
+import Swal from 'sweetalert2'
+
 // Mismos valores del ENUM de la tabla `pedidos` en comvibes_db
 const ESTADOS = ['Pendiente', 'En Camino', 'Entregado', 'Cancelado']
+
+// Espejo de TRANSICIONES en pedidos.controller.js: el backend es quien decide,
+// esto solo evita ofrecer en el select opciones que igual va a rechazar.
+const TRANSICIONES = {
+  Pendiente: ['En Camino', 'Cancelado'],
+  'En Camino': ['Pendiente', 'Entregado', 'Cancelado'],
+  Entregado: [],
+  Cancelado: [],
+}
+const ESTADOS_FINALES = ['Entregado', 'Cancelado']
 
 function OrderManagement() {
   const toast = useToast()
@@ -58,19 +70,27 @@ function OrderManagement() {
   // El backend ya crea la notificación al cliente al cambiar el estado —
   // no hace falta dispararla a mano como antes con NotificationsContext.
   const handleEstadoChange = async (idPed, estado) => {
+    // Entregado y Cancelado no tienen vuelta atrás; cancelar además devuelve
+    // las unidades al inventario. Se pide confirmación explícita.
+    if (ESTADOS_FINALES.includes(estado)) {
+      const { isConfirmed } = await Swal.fire({
+        icon: 'warning',
+        title: `¿Marcar el pedido #${idPed} como ${estado}?`,
+        text: estado === 'Cancelado'
+          ? 'Las unidades vuelven al inventario y el pedido ya no podrá cambiar de estado.'
+          : 'El pedido ya no podrá cambiar de estado.',
+        showCancelButton: true,
+        confirmButtonText: estado === 'Cancelado' ? 'Sí, cancelar' : 'Sí, marcar como entregado',
+        cancelButtonText: 'Volver',
+      })
+      if (!isConfirmed) return
+    }
     try {
       await updateOrderStatus(idPed, estado)
       toast.success('Estado del pedido actualizado')
     } catch (err) {
       toast.error('No se pudo actualizar el estado', err.message)
     }
-  }
-
-  const badgeClass = (estado) => {
-    if (estado === 'Entregado') return 'bg-success-subtle text-success'
-    if (estado === 'Cancelado') return 'bg-danger-subtle text-danger'
-    if (estado === 'En Camino') return 'bg-primary-subtle text-primary'
-    return 'bg-warning-subtle text-warning'
   }
 
   return (
@@ -140,9 +160,17 @@ function OrderManagement() {
                         className={`estado-select estado-select--${pedido.estado === 'En Camino' ? 'en-camino' : pedido.estado}`}
                         value={pedido.estado}
                         onChange={(e) => handleEstadoChange(pedido.idPed, e.target.value)}
+                        disabled={ESTADOS_FINALES.includes(pedido.estado)}
+                        aria-label={`Estado del pedido #${pedido.idPed}`}
                       >
                         {ESTADOS.map((estado) => (
-                          <option key={estado} value={estado}>{estado}</option>
+                          <option
+                            key={estado}
+                            value={estado}
+                            disabled={estado !== pedido.estado && !TRANSICIONES[pedido.estado]?.includes(estado)}
+                          >
+                            {estado}
+                          </option>
                         ))}
                       </select>
                     </td>

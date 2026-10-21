@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart as CartIcon, Minus, Plus, Trash2, Lock, Tag, Truck } from 'lucide-react'
+import { Minus, Plus, Trash2, Lock, Truck } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'

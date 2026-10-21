@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Swal from 'sweetalert2'
 import { Check, MapPin, CreditCard, Plus } from 'lucide-react'
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useOrders } from '../context/OrdersContext'
 import { useAddresses } from '../context/AddressesContext'
 import { useMetodosPago } from '../context/MetodosPagoContext'
+import { useProducts } from '../context/ProductsContext'
 import { syncCarrito } from '../api/carrito'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import AddressForm from '../components/addresses/AddressForm'
@@ -26,6 +27,7 @@ function CheckoutFlow() {
   const { createOrder } = useOrders()
   const { getByUser, addAddress } = useAddresses()
   const { metodos } = useMetodosPago()
+  const { refetch: refrescarCatalogo } = useProducts()
   const navigate = useNavigate()
 
   const direccionesUsuario = getByUser(user?.idUsu)
@@ -38,40 +40,24 @@ function CheckoutFlow() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
-  // Dirección de envío: se elige una guardada de la libreta, o se agrega una nueva al vuelo.
-  // Se usa useEffect en vez de inicializar el useState directamente porque
-  // AddressesContext puede estar cargando cuando este componente monta: si
-  // direccionesUsuario llega vacío en el primer render, el useState se fijaría
-  // en null y nunca se actualizaría aunque las direcciones llegaran después.
-  const [selectedAddressId, setSelectedAddressId] = useState(null)
-  const [newAddressFormOpen, setNewAddressFormOpen] = useState(false)
-  const [addressError, setAddressError] = useState('')
-  // Ref para saber si ya hicimos la selección inicial automática.
-  // Sin esto, cuando el usuario elige una dirección no predeterminada y el
-  // contexto re-renderiza (p.ej. tras agregar una dirección nueva), el
-  // useEffect volvía a correr y pisaba la selección del usuario.
-  const initialSelectionDone = useRef(false)
+  // Dirección de envío: se elige una guardada de la libreta, o se agrega una
+  // nueva al vuelo. La dirección seleccionada se DERIVA: la que eligió el
+  // cliente si sigue existiendo, o si no la predeterminada (o la primera).
+  // Antes se copiaba a un estado con un useEffect y un ref para no pisar la
+  // elección del cliente; derivarla evita ese caso por construcción, y
+  // funciona aunque AddressesContext todavía esté cargando al montar.
+  const [eleccion, setEleccion] = useState(null)
+  const predeterminadaId =
+    direccionesUsuario.find((d) => d.predeterminada)?.idDir ?? direccionesUsuario[0]?.idDir ?? null
+  const selectedAddressId = direccionesUsuario.some((d) => d.idDir === eleccion) ? eleccion : predeterminadaId
+  const setSelectedAddressId = setEleccion
 
-  useEffect(() => {
-    if (direccionesUsuario.length === 0) {
-      setNewAddressFormOpen(true)
-      setSelectedAddressId(null)
-      initialSelectionDone.current = false
-    } else {
-      // FIX: NO cerrar el formulario aqui cuando ya hay direcciones.
-      // El useEffect antes llamaba setNewAddressFormOpen(false) en este else,
-      // lo que hacia que cualquier re-render del contexto cerrara el formulario
-      // inmediatamente despues de que el usuario lo abria con el boton
-      // "Agregar otra direccion" — aparecia un instante y desaparecia.
-      // El cierre/apertura cuando ya hay direcciones es responsabilidad
-      // exclusiva del usuario (boton y onCancel), no del effect.
-      if (!initialSelectionDone.current) {
-        initialSelectionDone.current = true
-        const predeterminada = direccionesUsuario.find((d) => d.predeterminada)
-        setSelectedAddressId(predeterminada?.idDir ?? direccionesUsuario[0]?.idDir ?? null)
-      }
-    }
-  }, [direccionesUsuario])
+  // Sin direcciones guardadas el formulario de nueva dirección siempre se
+  // muestra; con direcciones, lo abre y cierra el cliente.
+  const [formularioAbierto, setFormularioAbierto] = useState(false)
+  const newAddressFormOpen = direccionesUsuario.length === 0 || formularioAbierto
+  const setNewAddressFormOpen = setFormularioAbierto
+  const [addressError, setAddressError] = useState('')
 
   const handleSaveNewAddress = async (values) => {
     const nueva = await addAddress(values)
@@ -124,12 +110,18 @@ function CheckoutFlow() {
       try {
         await syncCarrito(items.map((i) => ({ idPro: i.idPro, cantidad: i.cantidad })))
       } catch (syncErr) {
-        throw new Error(`No se pudo sincronizar el carrito: ${syncErr.message}`)
+        throw new Error(`No se pudo sincronizar el carrito: ${syncErr.message}`, { cause: syncErr })
       }
 
       // El backend arma pedido + pago + factura + envío + descuenta stock
       // en una sola transacción, y ya deja el carrito del servidor vacío.
-      const nuevoPedido = await createOrder({ idDir: selectedAddressId, idMet: Number(form.idMet) })
+      // totalEsperado: si el servidor calcula otro total (cambió un precio o
+      // no alcanzó el stock), no cobra y responde 409 con el detalle nuevo.
+      const nuevoPedido = await createOrder({
+        idDir: selectedAddressId,
+        idMet: Number(form.idMet),
+        totalEsperado: total,
+      })
 
       await Swal.fire({
         icon: 'success',
@@ -142,6 +134,19 @@ function CheckoutFlow() {
       clearCart()
       navigate(`/factura/${nuevoPedido.idPed}`, { replace: true })
     } catch (err) {
+      if (err.details?.motivo === 'total_cambio') {
+        // Se trae el catálogo actualizado: el carrito se recalcula solo con
+        // los precios y el stock nuevos, y el cliente decide si sigue.
+        await refrescarCatalogo()
+        await Swal.fire({
+          icon: 'warning',
+          title: 'El total de tu compra cambió',
+          text: `Antes: ${formatCurrency(err.details.totalEsperado)} · Ahora: ${formatCurrency(err.details.totalActual)}. ` +
+            'Actualizamos tu carrito con los precios y la disponibilidad de este momento. Revísalo y confirma de nuevo. No se hizo ningún cobro.',
+          confirmButtonText: 'Revisar',
+        })
+        return
+      }
       Swal.fire({ icon: 'error', title: 'No se pudo procesar el pago', text: err.message })
     } finally {
       setLoading(false)

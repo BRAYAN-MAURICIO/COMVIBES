@@ -43,7 +43,10 @@ app.use(
 app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 // FIX #11: 'dev' es verboso con colores ANSI — útil localmente, ruido en logs de producción.
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+// En pruebas no se registra cada petición: solo ensucia la salida de Jest.
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+}
 
 // Servir imágenes subidas por el admin como archivos estáticos.
 // Cualquiera puede leer las imágenes (son públicas), pero solo el
@@ -58,24 +61,40 @@ app.use('/uploads', require('express').static(require('path').join(__dirname, '.
 // Comprueba la conexión SMTP al arrancar. No bloquea el arranque: si falla,
 // solo deja el aviso en consola, para no descubrir el problema cuando un
 // usuario real intente registrarse o recuperar su contraseña.
-require('./utils/mailer').verificarConexion()
+if (process.env.NODE_ENV !== 'test') require('./utils/mailer').verificarConexion()
 
-// Aviso temprano si falta la migración sql/02_email_real.sql. Sin ella el
-// login y el registro fallan con "Unknown column 'correo_verificado'", un
-// error que desde el navegador no dice nada útil.
+// Aviso temprano si falta alguna migración. Sin ellas los errores llegan al
+// navegador como "Unknown column ..." o como un 500 genérico, que no dicen
+// nada útil. Cada entrada: la columna (o tabla) que crea y qué se rompe sin ella.
+const MIGRACIONES = [
+  { archivo: '02_email_real.sql', tabla: 'credencial', columna: 'correo_verificado', efecto: 'El login y el registro fallarán.' },
+  { archivo: '03_soporte_seguimiento.sql', tabla: 'soporte', columna: 'atendido_por', efecto: 'Responder PQR fallará.' },
+  { archivo: '04_integridad_fk.sql', tabla: 'credencial', columna: 'password_changed_at', efecto: 'Ninguna petición autenticada funcionará.' },
+  { archivo: '05_auditoria_admin.sql', tabla: 'auditoria_admin', columna: null, efecto: 'Las acciones de admin no quedarán registradas.' },
+]
+
 ;(async () => {
+  // En pruebas la base la prepara scripts/prepararBdPruebas.js, que ya
+  // aplica todas las migraciones; además esta consulta dejaría una conexión
+  // abierta que Jest reporta al terminar.
+  if (process.env.NODE_ENV === 'test') return
   try {
     const { pool } = require('./config/db')
-    const [cols] = await pool.query(
-      `SELECT COLUMN_NAME FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'credencial'
-          AND COLUMN_NAME = 'correo_verificado'`
-    )
-    if (cols.length === 0) {
-      console.error('\n[schema] ⚠  Falta la migración sql/02_email_real.sql — no existe credencial.correo_verificado.')
-      console.error('[schema]    El login y el registro fallarán hasta que la ejecutes:')
-      console.error('[schema]    mysql -u root -p combives_db < sql/02_email_real.sql\n')
+    for (const m of MIGRACIONES) {
+      const [filas] = m.columna
+        ? await pool.query(
+            `SELECT 1 FROM information_schema.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+            [m.tabla, m.columna]
+          )
+        : await pool.query(
+            'SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+            [m.tabla]
+          )
+      if (filas.length === 0) {
+        console.error(`\n[schema] ⚠  Falta la migración sql/${m.archivo}. ${m.efecto}`)
+        console.error(`[schema]    mysql -u root -p combives_db < sql/${m.archivo}\n`)
+      }
     }
   } catch (_) {
     // Si la BD todavía no responde, server.js ya avisa por su cuenta.
@@ -102,6 +121,7 @@ app.use('/api/opiniones', require('./routes/opiniones.routes'))
 app.use('/api/soporte', require('./routes/soporte.routes'))
 app.use('/api/reportes', require('./routes/reportes.routes'))
 app.use('/api/uploads', require('./routes/uploads.routes'))
+app.use('/api/auditoria', require('./routes/auditoria.routes'))
 
 app.use(notFoundHandler)
 app.use(errorHandler)

@@ -1,24 +1,13 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as metodosPagoApi from '../api/metodosPago'
+import { useCarga } from '../hooks/useCarga'
 
 const MetodosPagoContext = createContext(null)
 
 function MetodosPagoProvider({ children }) {
-  const [metodos, setMetodos] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchMetodos = useCallback(async () => {
-    setLoading(true)
-    try {
-      setMetodos(await metodosPagoApi.getMetodosPago())
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchMetodos()
-  }, [fetchMetodos])
+  const { datos: metodos, setDatos: setMetodos, cargando: loading } = useCarga(metodosPagoApi.getMetodosPago, {
+    inicial: [],
+  })
 
   // Usado en Settings.jsx para activar/desactivar un método en el checkout
   const toggleMetodo = async (idMet, activo) => {

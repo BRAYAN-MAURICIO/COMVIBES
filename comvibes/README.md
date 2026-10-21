@@ -1,16 +1,30 @@
-# React + Vite
+# ComVibes — Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Tienda y panel de administración de ComVibes. La puesta en marcha completa
+(backend, base de datos, variables de entorno) está en el README de la raíz.
 
-Currently, two official plugins are available:
+## Comandos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm run dev             # servidor de desarrollo en http://localhost:5173
+npm run build           # compila a dist/
+npm run lint            # ESLint (debe quedar en 0 problemas)
+npm test                # pruebas con Vitest
+npm run test:watch      # pruebas en modo observación mientras editas
+npm run test:cobertura  # pruebas con reporte de cobertura en coverage/
+```
 
-## React Compiler
+## Pruebas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Las pruebas viven junto al código que prueban (`*.test.js` / `*.test.jsx`) y
+usan Vitest con Testing Library y happy-dom. Corren con la zona horaria de
+Colombia (`vite.config.js`) para que el error de fechas corridas un día no
+pueda volver sin que una prueba falle.
 
-## Expanding the ESLint configuration
+## Cómo se cargan los datos
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Los contexts y páginas que piden datos al API usan `src/hooks/useCarga.js`:
+descarta respuestas viejas cuando cambian los filtros o la cuenta, y deja de
+mostrar los datos de un usuario en cuanto entra otro. Las páginas se cargan
+bajo demanda (`React.lazy` en `src/routes/AppRoutes.jsx`), así un cliente no
+descarga el panel de administración.

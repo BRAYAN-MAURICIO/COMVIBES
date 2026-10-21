@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Package, ChevronDown, ChevronUp, FileText, Truck, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useEnvios } from '../context/EnviosContext'
 import { getPedidos } from '../api/pedidos'
+import { useCarga } from '../hooks/useCarga'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import Pagination from '../components/ui/Pagination'
 import { formatCurrency, formatDate } from '../utils/formatters'
@@ -101,41 +102,20 @@ function OrderHistory() {
   const { getByOrder } = useEnvios()
   const [expandedId, setExpandedId] = useState(null)
 
-  // Paginación local — carga pedidos por página desde el backend
-  const [pedidos, setPedidos]       = useState([])
+  // Paginación server-side: cambiar de página cambia `cargarPagina`, y useCarga
+  // pide la página nueva (y descarta la respuesta de la anterior si llega tarde).
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal]           = useState(0)
-  const [loading, setLoading]       = useState(true)
+  const cargarPagina = useCallback(() => getPedidos({ page: currentPage, limit: PAGE_SIZE }), [currentPage])
+  const { datos: res, cargando: loading } = useCarga(cargarPagina, { clave: user?.idUsu, inicial: null })
 
-  const fetchPedidos = useCallback(async (page) => {
-    setLoading(true)
-    try {
-      const res = await getPedidos({ page, limit: PAGE_SIZE })
-      // El backend devuelve { pedidos, total, page, totalPages } cuando se pagina
-      if (res && res.pedidos) {
-        setPedidos(res.pedidos)
-        setTotal(res.total)
-        setTotalPages(res.totalPages)
-        setCurrentPage(res.page)
-      } else {
-        // Fallback: respuesta sin paginación (array plano)
-        setPedidos(Array.isArray(res) ? res : [])
-      }
-    } catch {
-      setPedidos([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchPedidos(1)
-  }, [fetchPedidos])
+  // El backend devuelve { pedidos, total, page, totalPages } cuando se pagina;
+  // si viniera un array plano (respuesta sin paginar), se usa tal cual.
+  const pedidos = res?.pedidos ?? (Array.isArray(res) ? res : [])
+  const totalPages = res?.totalPages ?? 1
+  const total = res?.total ?? pedidos.length
 
   const handlePageChange = (page) => {
     setCurrentPage(page)
-    fetchPedidos(page)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 

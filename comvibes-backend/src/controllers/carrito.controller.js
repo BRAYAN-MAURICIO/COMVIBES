@@ -14,7 +14,12 @@ async function getOrCreateCarritoId(idUsu) {
 const SELECT_ITEMS = `
   SELECT
     dc.idDetCar, dc.idPro, dc.cantidad,
-    CAST(dc.precio AS DECIMAL(10,2)) AS precio,
+    -- Precio VIGENTE del producto: es el que se cobra en el checkout. Antes se
+    -- usaba dc.precio (el precio al momento de agregar), así que el carrito y
+    -- el cobro podían no coincidir con el catálogo (auditoría ISO, H6).
+    -- precio_agregado se conserva por si el frontend quiere avisar del cambio.
+    CAST(p.precio AS DECIMAL(10,2)) AS precio,
+    CAST(dc.precio AS DECIMAL(10,2)) AS precio_agregado,
     p.nombre,
     COALESCE(p.imagen_url, '') AS imagen,
     p.activo,
@@ -30,6 +35,7 @@ function normalizeItem(row) {
   return {
     ...row,
     precio: Number(row.precio) || 0,
+    precio_agregado: Number(row.precio_agregado) || 0,
     stock_disponible: Number(row.stock_disponible),
     activo: Boolean(row.activo),
     imagen: row.imagen || null,

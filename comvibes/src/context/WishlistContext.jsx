@@ -1,24 +1,17 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as wishlistApi from '../api/wishlist'
 import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const WishlistContext = createContext(null)
 
 function WishlistProvider({ children }) {
-  const { isAuthenticated } = useAuth()
-  const [items, setItems] = useState([])
-
-  const fetchWishlist = useCallback(async () => {
-    if (!isAuthenticated) {
-      setItems([])
-      return
-    }
-    setItems(await wishlistApi.getWishlist())
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    fetchWishlist()
-  }, [fetchWishlist])
+  const { isAuthenticated, user } = useAuth()
+  const { datos: items, setDatos: setItems } = useCarga(wishlistApi.getWishlist, {
+    habilitado: isAuthenticated,
+    clave: user?.idUsu,
+    inicial: [],
+  })
 
   const isInWishlist = (idPro) => items.some((item) => item.idPro === idPro)
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useToast } from '../../context/ToastContext'
 import { Store, CreditCard, Share2, Pencil } from 'lucide-react'
 import { required, isEmail, onlyNumbers, runValidations } from '../../utils/validators'

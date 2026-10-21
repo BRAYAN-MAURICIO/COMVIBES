@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingBag, Users, Package, ClipboardList,
-  BarChart3, MessageSquare, Settings, Menu, LogOut, Truck, X, Home,
+  BarChart3, MessageSquare, Settings, Menu, LogOut, Truck, X, Home, ScrollText,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useOrders } from '../../context/OrdersContext'
@@ -17,6 +17,7 @@ const LINKS = [
   { to: '/admin/proveedores',  label: 'Proveedores',     icon: Truck },
   { to: '/admin/reportes',     label: 'Reportes',        icon: BarChart3 },
   { to: '/admin/soporte',      label: 'Soporte (PQR)',   icon: MessageSquare, badge: 'soporte' },
+  { to: '/admin/auditoria',    label: 'Bitácora',        icon: ScrollText },
   { to: '/admin/configuracion',label: 'Configuración',   icon: Settings },
 ]
 

@@ -202,7 +202,7 @@ function enviarCodigoVerificacion(correo, nombre, codigo) {
     text: `Hola ${nombre}. Tu código para activar tu cuenta en ${MARCA} es ${codigo}. Vence en 10 minutos.`,
     html: plantillaBase({
       titulo: 'Activa tu cuenta',
-      saludo: `Hola <strong>${nombre}</strong>,`,
+      saludo: `Hola <strong>${esc(nombre)}</strong>,`, // esc: el nombre lo escribe el usuario (H18)
       cuerpo: `Gracias por registrarte en ${MARCA}. Ingresa este código en la pantalla de verificación para activar tu cuenta:`,
       codigo,
       pie: 'Si no creaste esta cuenta puedes ignorar este correo: la cuenta no se activará sin el código.',
@@ -218,7 +218,7 @@ function enviarCodigoReset(correo, nombre, codigo) {
     text: `Hola ${nombre}. Tu código para restablecer tu contraseña en ${MARCA} es ${codigo}. Vence en 10 minutos.`,
     html: plantillaBase({
       titulo: 'Recupera tu contraseña',
-      saludo: `Hola <strong>${nombre}</strong>,`,
+      saludo: `Hola <strong>${esc(nombre)}</strong>,`, // esc: el nombre lo escribe el usuario (H18)
       cuerpo: 'Recibimos una solicitud para restablecer tu contraseña. Ingresa este código en la pantalla de recuperación:',
       codigo,
       pie: 'Si no fuiste tú, ignora este correo: tu contraseña actual sigue siendo válida y nadie puede cambiarla sin este código.',

@@ -13,7 +13,7 @@ function errorHandler(err, req, res, next) {
     // Detectar si es una dirección — mensaje más claro para el usuario
     const refersToDir = err.message?.includes('direcciones')
     const msg = refersToDir
-      ? 'No puedes eliminar esta dirección porque tiene pedidos asociados. Aplica la migración 01_schema_updates.sql para habilitar esta operación.'
+      ? 'No puedes eliminar esta dirección porque tiene pedidos asociados. El administrador debe aplicar la migración sql/04_integridad_fk.sql.'
       : 'No se puede eliminar: hay registros relacionados que dependen de este.'
     return res.status(409).json({ success: false, message: msg })
   }

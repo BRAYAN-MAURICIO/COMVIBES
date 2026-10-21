@@ -1,24 +1,17 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as soporteApi from '../api/soporte'
 import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const SupportContext = createContext(null)
 
 function SupportProvider({ children }) {
-  const { isAuthenticated } = useAuth()
-  const [tickets, setTickets] = useState([])
-
-  const fetchTickets = useCallback(async () => {
-    if (!isAuthenticated) {
-      setTickets([])
-      return
-    }
-    setTickets(await soporteApi.getTickets())
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    fetchTickets()
-  }, [fetchTickets])
+  const { isAuthenticated, user } = useAuth()
+  const { datos: tickets, setDatos: setTickets, recargar: fetchTickets } = useCarga(soporteApi.getTickets, {
+    habilitado: isAuthenticated,
+    clave: user?.idUsu,
+    inicial: [],
+  })
 
   // El backend acepta tickets de invitados (sin sesión) si mandamos
   // nombre/correo; con sesión esos campos se ignoran y usa los de la cuenta.

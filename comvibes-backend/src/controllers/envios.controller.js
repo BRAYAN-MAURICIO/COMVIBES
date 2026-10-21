@@ -1,6 +1,7 @@
 const { pool } = require('../config/db')
 const { ok, fail } = require('../utils/response')
 const asyncHandler = require('../utils/asyncHandler')
+const { registrar } = require('../utils/auditoria')
 
 // GET /api/envios/pedido/:idPed - el dueño del pedido o un admin
 const getByPedido = asyncHandler(async (req, res) => {
@@ -41,6 +42,10 @@ const upsertEnvio = asyncHandler(async (req, res) => {
   }
 
   const [rows] = await pool.query('SELECT * FROM envios WHERE idPed = ?', [req.params.idPed])
+  await registrar(pool, req, {
+    accion: 'envio.actualizar', entidad: 'pedido', idEntidad: Number(req.params.idPed),
+    despues: { transportadora, numero_guia, fecha_estimada, estado_envio },
+  })
   return ok(res, rows[0])
 })
 

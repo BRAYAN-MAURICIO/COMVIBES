@@ -51,4 +51,20 @@ const verifyEmailLimiter = rateLimit({
   skipSuccessfulRequests: true,
 })
 
-module.exports = { forgotPasswordLimiter, loginLimiter, verifyEmailLimiter }
+// ── Límite para crear PQR ────────────────────────────────────────────────
+// POST /api/soporte es público (los invitados pueden escribir sin cuenta).
+// Sin límite, un script podía llenar la tabla de tickets en segundos.
+// 5 por hora y por IP alcanza para un cliente real con varios problemas.
+// Auditoría ISO 2026-09-26, hallazgo H9.
+const soporteLimiter = rateLimit({
+  windowMs:        60 * 60 * 1000,
+  max:             5,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message: {
+    success: false,
+    message: 'Enviaste varias solicitudes seguidas. Espera un rato antes de crear otra.',
+  },
+})
+
+module.exports = { forgotPasswordLimiter, loginLimiter, verifyEmailLimiter, soporteLimiter }

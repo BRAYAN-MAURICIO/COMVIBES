@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as productosApi from '../api/productos'
+import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const ProductsContext = createContext(null)
 
@@ -17,46 +19,44 @@ function toBackendPayload({ imagen, ...rest }) {
 // que migrar esas páginas a paginación server-side también.
 const ADMIN_LIMIT = 500
 
+// Carga en lotes de 50 (límite del backend) hasta tener todos, para no
+// superar el máximo por petición y evitar timeouts.
+async function cargarCatalogoCompleto() {
+  let pagina = 1
+  let todos = []
+  let total
+
+  for (;;) {
+    const res = await productosApi.getProductos({ page: pagina, limit: 50 })
+    const lote = res?.productos ?? (Array.isArray(res) ? res : [])
+    todos = [...todos, ...lote]
+    total = res?.total ?? lote.length
+
+    // Parar si ya tenemos todos, si el lote vino incompleto,
+    // o si superamos el límite de seguridad ADMIN_LIMIT
+    if (lote.length < 50 || todos.length >= total || todos.length >= ADMIN_LIMIT) break
+    pagina++
+  }
+  return { productos: todos, total }
+}
+
+const SIN_PRODUCTOS = { productos: [], total: 0 }
+
 function ProductsProvider({ children }) {
-  const [productos, setProductos] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [totalProductos, setTotalProductos] = useState(0)
-
-  const fetchProductos = useCallback(async () => {
-    setLoading(true)
-    try {
-      // Carga en lotes de 50 (límite del backend) hasta tener todos,
-      // para no superar el máximo por petición y evitar timeouts.
-      let pagina = 1
-      let todos = []
-      let hayMas = true
-
-      while (hayMas) {
-        const res = await productosApi.getProductos({ page: pagina, limit: 50 })
-        const lote = res?.productos ?? (Array.isArray(res) ? res : [])
-        todos = [...todos, ...lote]
-
-        const total = res?.total ?? lote.length
-        setTotalProductos(total)
-
-        // Parar si ya tenemos todos, si el lote vino vacío,
-        // o si superamos el límite de seguridad ADMIN_LIMIT
-        if (lote.length < 50 || todos.length >= total || todos.length >= ADMIN_LIMIT) {
-          hayMas = false
-        } else {
-          pagina++
-        }
-      }
-
-      setProductos(todos)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchProductos()
-  }, [fetchProductos])
+  // El backend solo incluye productos inactivos cuando quien pide es admin
+  // (auditoría ISO, H16). Por eso el rol va como `clave`: si un admin inicia
+  // sesión sin recargar la página, la lista se vuelve a pedir; si no, se
+  // quedaría con la lista pública.
+  const { user } = useAuth()
+  const { datos, setDatos, cargando: loading, recargar } = useCarga(cargarCatalogoCompleto, {
+    clave: user?.rol ?? null,
+    inicial: SIN_PRODUCTOS,
+  })
+  const productos = datos.productos
+  const totalProductos = datos.total
+  const fetchProductos = recargar
+  const setProductos = (actualizar) =>
+    setDatos((prev) => ({ ...prev, productos: actualizar(prev.productos) }))
 
   const createProduct = async (payload) => {
     const created = await productosApi.createProducto(toBackendPayload(payload))

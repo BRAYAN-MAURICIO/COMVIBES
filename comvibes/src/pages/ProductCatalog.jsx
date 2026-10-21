@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/products/ProductCard'
 import ProductCardSkeleton from '../components/ui/ProductCardSkeleton'
@@ -9,6 +9,7 @@ import EmptyState from '../components/ui/EmptyState'
 import Pagination from '../components/ui/Pagination'
 import { useCategories } from '../context/CategoriesContext'
 import { getCatalogo } from '../api/productos'
+import { useCarga } from '../hooks/useCarga'
 
 const PAGE_SIZE = 9
 const DEBOUNCE_MS = 350
@@ -26,12 +27,6 @@ function ProductCatalog() {
   const [sortBy, setSortBy]   = useState(searchParams.get('orden') || 'newest')
   const [currentPage, setCurrentPage] = useState(Number(searchParams.get('pagina')) || 1)
 
-  // ─── Resultado del servidor ───────────────────────────────────────────────
-  const [productos, setProductos]   = useState([])
-  const [total, setTotal]           = useState(0)
-  const [totalPages, setTotalPages] = useState(1)
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState(null)
 
   // ─── Debounce del término de búsqueda ─────────────────────────────────────
   useEffect(() => {
@@ -40,34 +35,26 @@ function ProductCatalog() {
   }, [searchTerm])
 
   // ─── Llamada al backend ────────────────────────────────────────────────────
-  // Se dispara cada vez que cambia cualquier filtro o la página.
+  // Cada cambio de filtro o de página crea una `cargarPagina` nueva y useCarga
+  // pide los resultados; si el usuario cambia otra vez antes de que llegue la
+  // respuesta, la anterior se descarta (antes podía pintarse encima de la nueva).
   // El debounce garantiza que no se haga una petición por cada letra.
-  const fetchProductos = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const params = {
+  const cargarPagina = useCallback(
+    () =>
+      getCatalogo({
         page: currentPage,
         limit: PAGE_SIZE,
         sortBy,
         ...(debouncedSearch.trim() && { search: debouncedSearch.trim() }),
         ...(selectedCategory && { categoria: selectedCategory }),
-      }
-      const res = await getCatalogo(params)
-      setProductos(res.productos || [])
-      setTotal(res.total || 0)
-      setTotalPages(res.totalPages || 1)
-    } catch (err) {
-      setError('No se pudieron cargar los productos.')
-      setProductos([])
-    } finally {
-      setLoading(false)
-    }
-  }, [debouncedSearch, selectedCategory, sortBy, currentPage])
-
-  useEffect(() => {
-    fetchProductos()
-  }, [fetchProductos])
+      }),
+    [debouncedSearch, selectedCategory, sortBy, currentPage]
+  )
+  const { datos: res, cargando: loading, error: errorCarga } = useCarga(cargarPagina, { inicial: null })
+  const productos = res?.productos || []
+  const total = res?.total || 0
+  const totalPages = res?.totalPages || 1
+  const error = errorCarga ? 'No se pudieron cargar los productos.' : null
 
   // ─── Sincronizar URL params ─────────────────────────────────────────────
   // La URL refleja el estado actual de los filtros para que el usuario

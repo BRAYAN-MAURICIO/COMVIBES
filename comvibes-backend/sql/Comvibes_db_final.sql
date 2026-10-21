@@ -79,6 +79,8 @@ CREATE TABLE credencial (
     fecha_creacion  DATETIME DEFAULT CURRENT_TIMESTAMP,
     ultimo_acceso   DATETIME,
     estado          ENUM('activo','inactivo','bloqueado') DEFAULT 'activo',
+    -- Fecha del último cambio de contraseña: invalida los tokens emitidos antes
+    password_changed_at DATETIME NULL DEFAULT NULL,
     FOREIGN KEY (idUsu) REFERENCES usuarios(idUsu) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -259,7 +261,9 @@ CREATE TABLE envios (
     fecha_estimada    DATE NULL,
     telefono_contacto VARCHAR(20),
     FOREIGN KEY (idPed) REFERENCES pedidos(idPed),
-    FOREIGN KEY (idDir) REFERENCES direcciones(idDir)
+    -- SET NULL: borrar una dirección no borra ni bloquea el historial del pedido
+    CONSTRAINT fk_envios_direccion
+      FOREIGN KEY (idDir) REFERENCES direcciones(idDir) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE facturas (
@@ -317,6 +321,22 @@ CREATE TABLE soporte (
     fecha_creacion  DATETIME DEFAULT CURRENT_TIMESTAMP,
     fecha_resolucion DATETIME,
     FOREIGN KEY (idUsu) REFERENCES usuarios(idUsu)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Bitácora de acciones administrativas (ver sql/05_auditoria_admin.sql)
+CREATE TABLE auditoria_admin (
+    idAud       INT AUTO_INCREMENT PRIMARY KEY,
+    idUsu       INT NULL,
+    accion      VARCHAR(50)  NOT NULL,
+    entidad     VARCHAR(30)  NOT NULL,
+    id_entidad  INT          NULL,
+    detalle     TEXT         NULL,
+    ip          VARCHAR(45)  NULL,
+    fecha       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_aud_fecha   (fecha),
+    INDEX idx_aud_entidad (entidad, id_entidad),
+    CONSTRAINT fk_auditoria_usuario
+      FOREIGN KEY (idUsu) REFERENCES usuarios(idUsu) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE reportes (

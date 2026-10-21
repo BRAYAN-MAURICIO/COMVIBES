@@ -30,6 +30,11 @@ async function getUsuarioPlano(idUsu) {
 const CODIGO_TTL_MS = 10 * 60 * 1000 // 10 minutos
 const MAX_INTENTOS = 5               // intentos fallidos por código antes de quemarlo
 
+const mensajeCuentaNoActiva = (estado) =>
+  estado === 'bloqueado'
+    ? 'Esta cuenta está bloqueada. Contacta al administrador.'
+    : 'Esta cuenta está inactiva. Contacta al administrador.'
+
 const generarCodigo = () => String(crypto.randomInt(100000, 1000000))
 const hashCodigo = (codigo) => bcrypt.hash(codigo, 10)
 const fechaExpiracion = () => new Date(Date.now() + CODIGO_TTL_MS)
@@ -213,7 +218,9 @@ const verifyEmail = asyncHandler(async (req, res) => {
   if (rows.length === 0) return fail(res, 'Código inválido o expirado.', 400)
 
   const cred = rows[0]
-  if (cred.estado === 'bloqueado') return fail(res, 'Esta cuenta está bloqueada. Contacta al administrador.', 403)
+  if (cred.estado !== 'activo') {
+    return fail(res, mensajeCuentaNoActiva(cred.estado), 403, { estadoCuenta: cred.estado })
+  }
   if (cred.correo_verificado) {
     return fail(res, 'Esta cuenta ya está verificada. Puedes iniciar sesión normalmente.', 409)
   }
@@ -294,10 +301,16 @@ const login = asyncHandler(async (req, res) => {
   if (rows.length === 0) return fail(res, 'Correo o contraseña incorrectos.', 401)
 
   const cred = rows[0]
-  if (cred.estado === 'bloqueado') return fail(res, 'Esta cuenta está bloqueada. Contacta al administrador.', 403)
 
   const match = await bcrypt.compare(password, cred.contrasena_hash)
   if (!match) return fail(res, 'Correo o contraseña incorrectos.', 401)
+
+  // El estado se revisa DESPUÉS de la contraseña (así no se revela a
+  // cualquiera que una cuenta está bloqueada) y ahora cubre también
+  // 'inactivo': antes solo se rechazaba 'bloqueado'. Auditoría ISO, H1.
+  if (cred.estado !== 'activo') {
+    return fail(res, mensajeCuentaNoActiva(cred.estado), 403, { estadoCuenta: cred.estado })
+  }
 
   // La verificación se comprueba DESPUÉS de la contraseña: así el mensaje
   // "falta verificar" solo lo ve quien realmente conoce las credenciales.

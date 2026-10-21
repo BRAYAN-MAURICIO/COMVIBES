@@ -1,5 +1,7 @@
 # ComVibes
 
+[![CI](https://github.com/BRAYAN-MAURICIO/COMVIBES/actions/workflows/ci.yml/badge.svg)](https://github.com/BRAYAN-MAURICIO/COMVIBES/actions/workflows/ci.yml)
+
 Tienda en línea de bolsos y accesorios. Proyecto completo: catálogo con
 búsqueda y filtros, carrito, checkout con factura y envío, panel de
 administración, soporte (PQR) y módulo de reportes.
@@ -17,7 +19,7 @@ Mockups de las pantallas (Genially):
 https://view.genially.com/68adf10416483e109bd8367
 
 El esquema de la base de datos vive únicamente en `comvibes-backend/sql/`
-(`Comvibes_db_final.sql` más las migraciones numeradas `02_` y `03_`). Esa
+(`Comvibes_db_final.sql` más las migraciones numeradas `02_` a `05_`). Esa
 carpeta es la fuente de verdad del esquema; no hay copias en la raíz.
 
 ## Stack
@@ -28,7 +30,7 @@ SweetAlert2, Lucide.
 **Backend:** Express 4, MySQL2, JWT, bcryptjs, Multer, Sharp, Nodemailer,
 express-rate-limit.
 
-**Base de datos:** MySQL 8 o MariaDB 10.6+ (`combives_db`, 25 tablas).
+**Base de datos:** MySQL 8 o MariaDB 10.6+ (`combives_db`, 26 tablas).
 
 ## Puesta en marcha
 
@@ -41,9 +43,11 @@ cd comvibes-backend
 mysql -u root -p --default-character-set=utf8mb4 < sql/Comvibes_db_final.sql
 mysql -u root -p combives_db < sql/02_email_real.sql
 mysql -u root -p combives_db < sql/03_soporte_seguimiento.sql
+mysql -u root -p combives_db < sql/04_integridad_fk.sql
+mysql -u root -p combives_db < sql/05_auditoria_admin.sql
 ```
 
-Las migraciones `02` y `03` son idempotentes: se pueden correr varias veces
+Las migraciones `02` a `05` son idempotentes: se pueden correr varias veces
 sin romper nada.
 
 ### 2. Backend
@@ -74,6 +78,23 @@ npm run dev
 ```
 
 Abre http://localhost:5173
+
+### 4. Pruebas
+
+```bash
+# Backend: crea la base de pruebas (combives_db_test) y corre todo
+cd comvibes-backend
+npm run test:db:preparar
+npm run test:db
+
+# Frontend
+cd comvibes
+npm test
+```
+
+Las pruebas del backend nunca tocan `combives_db`: usan su propia base,
+creada desde los mismos `.sql`. Cada push a `main` las corre en GitHub
+Actions junto con ESLint y el build (insignia CI de arriba).
 
 ## Configuración
 

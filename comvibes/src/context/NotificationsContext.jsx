@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useCallback, useRef } from 'react'
 import * as notificacionesApi from '../api/notificaciones'
 import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const NotificationsContext = createContext(null)
 
@@ -9,41 +10,38 @@ const NotificationsContext = createContext(null)
 // existe un addNotification manual acá, a diferencia de la versión mock.
 function NotificationsProvider({ children }) {
   const { isAuthenticated, user } = useAuth()
-  const [notificaciones, setNotificaciones] = useState([])
   const falloAvisado = useRef(false)
 
+  const { datos: notificaciones, setDatos: setNotificaciones, recargar } = useCarga(
+    notificacionesApi.getNotificaciones,
+    { habilitado: isAuthenticated, clave: user?.idUsu, inicial: [] }
+  )
+
+  // Recarga para el polling. Sin este catch, cada fallo de red se convertía
+  // en un "Uncaught (in promise) Error" en consola, y como se repite cada 30s,
+  // con el backend caído la consola se llenaba de errores idénticos. Se
+  // conservan las notificaciones que ya estaban: un fallo puntual de red no
+  // debería vaciar la campanita.
   const fetchNotificaciones = useCallback(async () => {
-    if (!isAuthenticated) {
-      setNotificaciones([])
-      return
-    }
-    // Sin este catch, cada fallo de red se convertía en un "Uncaught (in
-    // promise) Error" en consola. Y como esto se repite por polling cada 30s,
-    // con el backend caído la consola se llenaba de errores idénticos.
     try {
-      setNotificaciones(await notificacionesApi.getNotificaciones())
+      await recargar()
       falloAvisado.current = false
     } catch (err) {
-      // Se conservan las notificaciones que ya estaban: un fallo puntual de red
-      // no debería vaciar la campanita.
       if (!falloAvisado.current) {
         console.warn('[notificaciones] No se pudieron cargar:', err.message)
         falloAvisado.current = true
       }
     }
-  }, [isAuthenticated])
+  }, [recargar])
 
+  // La primera carga la hace useCarga. Aquí solo el "tiempo real" por
+  // polling (no hay websockets): cada 30s, y también cuando el usuario vuelve
+  // a la pestaña (ej. la dejó abierta y mientras tanto el admin cambió el
+  // estado de su pedido).
   useEffect(() => {
-    fetchNotificaciones()
+    if (!isAuthenticated) return undefined
 
-    if (!isAuthenticated) return
-
-    // No hay websockets, así que simulamos "tiempo real" con polling: cada
-    // 30s mientras la pestaña esté activa, y también cuando el usuario
-    // vuelve a la pestaña (ej. la dejó abierta en otra ventana y el admin
-    // mientras tanto cambió el estado de su pedido).
     const intervalId = window.setInterval(fetchNotificaciones, 30000)
-
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') fetchNotificaciones()
     }
@@ -53,7 +51,7 @@ function NotificationsProvider({ children }) {
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [fetchNotificaciones, user?.idUsu, isAuthenticated])
+  }, [fetchNotificaciones, isAuthenticated])
 
   const getByUser = () => notificaciones
 

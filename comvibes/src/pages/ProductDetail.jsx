@@ -9,9 +9,9 @@ import { useToast } from '../context/ToastContext'
 import { useCategories } from '../context/CategoriesContext'
 import { formatCurrency, formatDate } from '../utils/formatters'
 import { getProducto, getCatalogo } from '../api/productos'
+import { useCarga } from '../hooks/useCarga'
 import ProductGallery from '../components/products/ProductGallery'
 import ProductCard from '../components/products/ProductCard'
-import ProductCardSkeleton from '../components/ui/ProductCardSkeleton'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import StarRating from '../components/ui/StarRating'
 
@@ -53,52 +53,41 @@ function ProductDetail() {
   // El producto se carga directamente desde el backend (GET /api/productos/:id),
   // no desde ProductsContext, porque ese contexto usa includeInactive=true y
   // limit=200 — pensado para el admin. Un cliente no debería depender de él.
-  const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
+  const cargarProducto = useCallback(() => getProducto(id), [id])
+  const { datos: productoApi, cargando: loading } = useCarga(cargarProducto, { inicial: null })
+  // Un producto inactivo (o un error al pedirlo) se muestra como "no encontrado".
+  const product = productoApi?.activo ? productoApi : null
+  const notFound = !loading && !product
 
-  const [cantidad, setCantidad] = useState(1)
+  // La cantidad elegida pertenece al producto que se está viendo: al navegar
+  // a otro producto vuelve a 1 sin necesidad de un useEffect.
+  const [seleccion, setSeleccion] = useState({ id, cantidad: 1 })
+  const cantidad = seleccion.id === id ? seleccion.cantidad : 1
+  const setCantidad = (valor) =>
+    setSeleccion((prev) => {
+      const actual = prev.id === id ? prev.cantidad : 1
+      return { id, cantidad: typeof valor === 'function' ? valor(actual) : valor }
+    })
+
   const [nuevaCalificacion, setNuevaCalificacion] = useState(0)
   const [nuevoComentario, setNuevoComentario] = useState('')
   const [errorResena, setErrorResena] = useState('')
   const [submittingResena, setSubmittingResena] = useState(false)
-  const [relacionados, setRelacionados] = useState([])
 
-  const loadProduct = useCallback(async () => {
-    setLoading(true)
-    setNotFound(false)
-    try {
-      const prod = await getProducto(id)
-      if (!prod || !prod.activo) {
-        setNotFound(true)
-        return
-      }
-      setProduct(prod)
-      setCantidad(1)
-    } catch {
-      setNotFound(true)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
+  // Relacionados: otros productos de la misma categoría, una vez que hay producto.
+  const idPro = product?.idPro
+  const idCat = product?.idCat
+  const cargarRelacionados = useCallback(async () => {
+    const res = await getCatalogo({ categoria: idCat, limit: 5 })
+    return (res.productos || []).filter((p) => p.idPro !== idPro).slice(0, 4)
+  }, [idCat, idPro])
+  const { datos: relacionados } = useCarga(cargarRelacionados, { habilitado: Boolean(idPro), inicial: [] })
 
+  // Reseñas del producto (quedan en ReviewsContext, que actualiza su estado
+  // cuando llega la respuesta).
   useEffect(() => {
-    loadProduct()
-  }, [loadProduct])
-
-  // Cargar relacionados y reseñas una vez que tenemos el producto
-  useEffect(() => {
-    if (!product) { setRelacionados([]); return }
-
-    getCatalogo({ categoria: product.idCat, limit: 5 })
-      .then((res) => {
-        const lista = (res.productos || []).filter((p) => p.idPro !== product.idPro).slice(0, 4)
-        setRelacionados(lista)
-      })
-      .catch(() => setRelacionados([]))
-
-    loadReviews(product.idPro)
-  }, [product, loadReviews])
+    if (idPro) loadReviews(idPro).catch(() => {})
+  }, [idPro, loadReviews])
 
   if (loading) return <ProductDetailSkeleton />
 

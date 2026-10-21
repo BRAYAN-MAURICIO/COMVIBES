@@ -1,41 +1,38 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback } from 'react'
 import * as opinionesApi from '../api/opiniones'
 import { getPedidos } from '../api/pedidos'
 import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const ReviewsContext = createContext(null)
+const SIN_COMPRAS = new Set()
+
+// idPro de los productos que el usuario compró (pedido Entregado o En Camino):
+// habilita el formulario de reseña sin esperar al backend.
+async function cargarComprados() {
+  const pedidos = await getPedidos()
+  const ids = new Set()
+  ;(Array.isArray(pedidos) ? pedidos : []).forEach((p) => {
+    if (p.estado === 'Entregado' || p.estado === 'En Camino') {
+      ;(p.detalle || []).forEach((d) => ids.add(d.idPro))
+    }
+  })
+  return ids
+}
 
 // A diferencia del resto, las reseñas NO se precargan todas al montar la
 // app (no hay un endpoint "todas las opiniones", y no haría falta: se
 // cargan por producto, bajo demanda, desde ProductDetail).
 function ReviewsProvider({ children }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  // Las reseñas son públicas: el caché por producto no depende de la sesión.
   const [reviewsByProduct, setReviewsByProduct] = useState({}) // { [idPro]: Review[] }
-  // Set de idPro que el usuario ha comprado (Entregado o En Camino)
-  // Se usa para mostrar/ocultar el formulario de reseña sin esperar al backend.
-  const [purchasedProducts, setPurchasedProducts] = useState(new Set())
-
-  // Al cerrar sesión limpiamos el caché para que el siguiente usuario
-  // no vea reseñas cargadas de la sesión anterior.
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setReviewsByProduct({})
-      setPurchasedProducts(new Set())
-      return
-    }
-    // Cargar qué productos ha comprado este usuario para habilitar el formulario de reseña
-    getPedidos()
-      .then((pedidos) => {
-        const ids = new Set()
-        ;(Array.isArray(pedidos) ? pedidos : []).forEach((p) => {
-          if (p.estado === 'Entregado' || p.estado === 'En Camino') {
-            ;(p.detalle || []).forEach((d) => ids.add(d.idPro))
-          }
-        })
-        setPurchasedProducts(ids)
-      })
-      .catch(() => {})
-  }, [isAuthenticated])
+  // Las compras sí son de la sesión: al cambiar de cuenta se descartan solas.
+  const { datos: purchasedProducts } = useCarga(cargarComprados, {
+    habilitado: isAuthenticated,
+    clave: user?.idUsu,
+    inicial: SIN_COMPRAS,
+  })
 
   const loadReviews = useCallback(async (idPro) => {
     const data = await opinionesApi.getOpinionesByProducto(idPro)

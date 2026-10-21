@@ -66,3 +66,19 @@ desktop.ini
 comvibes_.zip
 Comvibes_bas.sql
 Mockups
+
+# Reportes de cobertura de pruebas (npm run test:cobertura)
+coverage/
+
+# package-lock.json suelto en la raíz (sale de correr npm install fuera de
+# comvibes/ o comvibes-backend/). Cada proyecto tiene el suyo.
+/package-lock.json
+/package.json
+/node_modules/
+
+# Evidencias académicas de QA: se entregan aparte, no van en el repositorio
+docs/calidad/evidencias/
+
+# Imágenes que sube el admin desde el panel (las de ejemplo ya versionadas se conservan)
+comvibes-backend/uploads/productos/*
+!comvibes-backend/uploads/productos/.gitkeep

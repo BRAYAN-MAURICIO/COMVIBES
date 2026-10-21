@@ -14,27 +14,45 @@ async function requireAuth(req, res, next) {
   let decoded
   try {
     decoded = verifyToken(token)
-  } catch (err) {
+  } catch {
     return fail(res, 'Token inválido o expirado.', 401)
   }
 
-  // FIX #6: verificar que el token no fue emitido antes del último cambio de
-  // contraseña. Si el usuario cambió su contraseña después de que este token
-  // fue firmado, lo invalidamos — aunque aún no haya expirado.
+  // Un token bien firmado no basta: la cuenta tiene que seguir existiendo y
+  // estar activa. Sin esta consulta, bloquear a un usuario desde el panel no
+  // tenía efecto hasta que su token caducara (hasta 7 días). Auditoría ISO
+  // 2026-09-26, hallazgo H1.
+  let cuenta
   try {
     const { pool } = require('../config/db')
     const [rows] = await pool.query(
-      'SELECT password_changed_at FROM credencial WHERE idUsu = ?',
+      'SELECT estado, password_changed_at FROM credencial WHERE idUsu = ?',
       [decoded.idUsu]
     )
-    if (rows.length > 0 && rows[0].password_changed_at) {
-      const changedAt = new Date(rows[0].password_changed_at).getTime() / 1000
-      if (decoded.iat < changedAt) {
-        return fail(res, 'Sesión expirada. Inicia sesión de nuevo.', 401)
-      }
+    cuenta = rows[0]
+  } catch (err) {
+    // Antes este catch dejaba pasar la petición. Si no podemos comprobar la
+    // cuenta, es más seguro negar el acceso que concederlo (H12).
+    console.error('[auth] No se pudo validar la cuenta del token:', err.message)
+    return fail(res, 'No pudimos validar tu sesión en este momento. Intenta de nuevo.', 503)
+  }
+
+  if (!cuenta) {
+    return fail(res, 'La cuenta de esta sesión ya no existe.', 401)
+  }
+  if (cuenta.estado !== 'activo') {
+    return fail(res, 'Tu cuenta no está activa. Contacta al administrador.', 403, {
+      estadoCuenta: cuenta.estado,
+    })
+  }
+
+  // FIX #6: un token emitido antes del último cambio de contraseña ya no vale,
+  // aunque todavía no haya expirado.
+  if (cuenta.password_changed_at) {
+    const changedAt = new Date(cuenta.password_changed_at).getTime() / 1000
+    if (decoded.iat < changedAt) {
+      return fail(res, 'Sesión expirada. Inicia sesión de nuevo.', 401)
     }
-  } catch (_) {
-    // Si falla la consulta extra, no bloqueamos — seguimos con el token válido
   }
 
   req.user = decoded
@@ -71,7 +89,7 @@ function optionalAuth(req, res, next) {
   if (scheme === 'Bearer' && token) {
     try {
       req.user = verifyToken(token)
-    } catch (err) {
+    } catch {
       // token inválido/expirado: seguimos como invitado en vez de fallar
     }
   }

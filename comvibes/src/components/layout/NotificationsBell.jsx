@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, Package, MessageSquare, CheckCheck } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationsContext'
 import { formatDate } from '../../utils/formatters'
 
@@ -11,7 +10,6 @@ const ICON_BY_TYPE = {
 }
 
 function NotificationsBell() {
-  const { user } = useAuth()
   const { getByUser, unreadCount, markAsRead, markAllAsRead } = useNotifications()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)

@@ -329,7 +329,8 @@ const ventasCsv = asyncHandler(async (req, res) => {
     ),
   ]
 
-  const csv = `﻿${lineas.join('\r\n')}\r\n`
+  // \uFEFF = BOM: sin él, Excel en español abre el CSV con las tildes dañadas
+  const csv = `\uFEFF${lineas.join('\r\n')}\r\n`
   const nombre = `reporte-ventas-comvibes-${rango.desde}_a_${rango.hasta}.csv`
 
   res.set('Content-Type', 'text/csv; charset=utf-8')

@@ -1,24 +1,21 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as direccionesApi from '../api/direcciones'
 import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const AddressesContext = createContext(null)
 
 function AddressesProvider({ children }) {
-  const { isAuthenticated } = useAuth()
-  const [direcciones, setDirecciones] = useState([])
+  const { isAuthenticated, user } = useAuth()
+  const idUsu = user?.idUsu
 
-  const fetchDirecciones = useCallback(async () => {
-    if (!isAuthenticated) {
-      setDirecciones([])
-      return
-    }
-    setDirecciones(await direccionesApi.getDirecciones())
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    fetchDirecciones()
-  }, [fetchDirecciones])
+  // clave: idUsu → al cambiar de cuenta se descartan las direcciones de la
+  // anterior (ver hooks/useCarga.js).
+  const { datos: direcciones, recargar: fetchDirecciones } = useCarga(direccionesApi.getDirecciones, {
+    habilitado: isAuthenticated,
+    clave: idUsu,
+    inicial: [],
+  })
 
   // El backend ya filtra por el usuario autenticado (o por ?idUsu= si es
   // admin), así que acá solo se ordena para dejar la predeterminada primero.

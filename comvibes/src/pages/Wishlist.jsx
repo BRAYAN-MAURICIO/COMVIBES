@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import EmptyState from '../components/ui/EmptyState'
 import { useToast } from '../context/ToastContext'
-import { Heart, ShoppingCart as CartIcon, X } from 'lucide-react'
+import { ShoppingCart as CartIcon, X } from 'lucide-react'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { useWishlist } from '../context/WishlistContext'
 import { useCart } from '../context/CartContext'

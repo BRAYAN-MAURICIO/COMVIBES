@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useProducts } from './ProductsContext'
 import { useAuth } from './AuthContext'
 import * as carritoApi from '../api/carrito'
@@ -8,7 +8,7 @@ const STORAGE_KEY = 'comvibes_cart'
 
 function CartProvider({ children }) {
   const { productos } = useProducts()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   // El carrito vive en estado local (fuente de verdad en todo momento).
   // Para invitados se persiste en localStorage.
@@ -31,12 +31,28 @@ function CartProvider({ children }) {
   // que el siguiente usuario no herede el carrito del anterior.
   // Al iniciar sesión: cargamos el carrito del servidor y lo fusionamos con
   // lo que el invitado tenía en localStorage antes de autenticarse.
-  // Regla de fusión: si el mismo producto está en ambos lados, se suma la
-  // cantidad (respetando el stock disponible).
+  // Regla de fusión: si el mismo producto está en ambos lados, se toma la
+  // cantidad MAYOR (respetando el stock disponible). Antes se sumaban, pero
+  // al recargar con la sesión abierta el mismo carrito puede estar en los dos
+  // lados (el checkout lo sube al servidor) y sumar lo duplicaba.
+  //
+  // Corrección (auditoría ISO, fase 2): antes el carrito se borraba siempre
+  // que no hubiera sesión, y al cargar la página SIEMPRE hay un instante sin
+  // sesión mientras /auth/me responde. Resultado: recargar (F5) vaciaba el
+  // carrito de un cliente con sesión abierta. Ahora se espera a que termine
+  // esa comprobación y solo se limpia en la transición real de "con sesión"
+  // a "sin sesión" (cerrar sesión o sesión expirada).
+  const teniaSesion = useRef(false)
   useEffect(() => {
+    if (authLoading) return
+    const cerroSesion = teniaSesion.current && !isAuthenticated
+    teniaSesion.current = isAuthenticated
+
     if (!isAuthenticated) {
-      setItems([])
-      localStorage.removeItem(STORAGE_KEY)
+      if (cerroSesion) {
+        setItems([])
+        localStorage.removeItem(STORAGE_KEY)
+      }
       return
     }
 
@@ -59,8 +75,8 @@ function CartProvider({ children }) {
           for (const localItem of localItems) {
             const existente = merged.find((i) => i.idPro === localItem.idPro)
             if (existente) {
-              // Sumar cantidad (se recortará al stock en el siguiente useEffect)
-              existente.cantidad += localItem.cantidad
+              // La mayor de las dos (se recortará al stock en el siguiente useEffect)
+              existente.cantidad = Math.max(existente.cantidad, localItem.cantidad)
             } else {
               merged.push(localItem)
             }
@@ -77,30 +93,16 @@ function CartProvider({ children }) {
 
     sync()
   // Solo correr al cambiar el estado de autenticación
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated])
-
-  // ── Recortar cantidades si el stock bajó ────────────────────────────────
-  useEffect(() => {
-    setItems((prev) => {
-      let changed = false
-      const next = prev
-        .map((item) => {
-          const producto = productos.find((p) => p.idPro === item.idPro)
-          const stockDisponible = producto ? producto.stock : item.cantidad
-          if (item.cantidad > stockDisponible) {
-            changed = true
-            return { ...item, cantidad: stockDisponible }
-          }
-          return item
-        })
-        .filter((item) => item.cantidad > 0)
-      return changed ? next : prev
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productos])
+  }, [isAuthenticated, authLoading])
 
   const getStock  = (idPro) => productos.find((p) => p.idPro === idPro)?.stock ?? Infinity
+  // Precio vigente del catálogo. El ítem guarda el precio de cuando se agregó
+  // (sirve de respaldo si el catálogo aún no cargó), pero se muestra y se suma
+  // el actual, que es el que el backend cobra (auditoría ISO, H6).
+  const getPrecio = useCallback(
+    (item) => productos.find((p) => p.idPro === item.idPro)?.precio ?? item.precio,
+    [productos]
+  )
   // Imagen actualizada del catálogo — evita mostrar foto obsoleta si el admin la cambia
   const getImagen = (idPro, fallback = null) =>
     productos.find((p) => p.idPro === idPro)?.imagen ?? fallback
@@ -160,18 +162,36 @@ function CartProvider({ children }) {
     localStorage.removeItem(STORAGE_KEY)
   }
 
+  // Los ítems que se exponen ya traen el precio vigente y la cantidad
+  // recortada al stock disponible, así ShoppingCart y CheckoutFlow muestran
+  // exactamente lo que se va a cobrar. Antes el recorte se hacía con un
+  // useEffect que reescribía el carrito cada vez que cambiaba el catálogo;
+  // derivarlo aquí es más simple y no borra nada: si el stock vuelve, la
+  // cantidad que el cliente eligió sigue ahí.
+  const itemsVigentes = useMemo(
+    () =>
+      items
+        .map((item) => {
+          const producto = productos.find((p) => p.idPro === item.idPro)
+          const cantidad = producto ? Math.min(item.cantidad, producto.stock) : item.cantidad
+          return { ...item, cantidad, precio: getPrecio(item) }
+        })
+        .filter((item) => item.cantidad > 0),
+    [items, productos, getPrecio]
+  )
+
   const total = useMemo(
-    () => items.reduce((acc, item) => acc + item.precio * item.cantidad, 0),
-    [items]
+    () => Math.round(itemsVigentes.reduce((acc, item) => acc + item.precio * item.cantidad, 0) * 100) / 100,
+    [itemsVigentes]
   )
 
   const itemCount = useMemo(
-    () => items.reduce((acc, item) => acc + item.cantidad, 0),
-    [items]
+    () => itemsVigentes.reduce((acc, item) => acc + item.cantidad, 0),
+    [itemsVigentes]
   )
 
   const value = {
-    items,
+    items: itemsVigentes,
     addToCart,
     removeFromCart,
     updateQuantity,

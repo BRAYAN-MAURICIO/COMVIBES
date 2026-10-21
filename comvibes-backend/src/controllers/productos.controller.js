@@ -1,6 +1,7 @@
 const { pool } = require('../config/db')
 const { ok, created, fail } = require('../utils/response')
 const asyncHandler = require('../utils/asyncHandler')
+const { registrar } = require('../utils/auditoria')
 
 // El frontend (ProductsContext / ProductCard / ProductGallery) espera un
 // producto "plano" con: stock, imagenes[] y categoria como texto, aunque
@@ -69,7 +70,10 @@ const listProductos = asyncHandler(async (req, res) => {
   const where = []
   const params = []
 
-  if (!includeInactive) {
+  // Solo el admin ve productos desactivados; para cualquier otro visitante
+  // includeInactive se ignora (auditoría ISO, H16).
+  const esAdmin = req.user?.rol === 'admin'
+  if (!(includeInactive && esAdmin)) {
     where.push('p.activo = TRUE')
   }
   if (categoria) {
@@ -135,7 +139,10 @@ const listProductos = asyncHandler(async (req, res) => {
 
 const getProducto = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(`${SELECT_PRODUCTO_BASE} WHERE p.idPro = ?`, [req.params.id])
-  if (rows.length === 0) return fail(res, 'Producto no encontrado.', 404)
+  // Un producto desactivado es, para el público, un producto que no existe.
+  if (rows.length === 0 || (!rows[0].activo && req.user?.rol !== 'admin')) {
+    return fail(res, 'Producto no encontrado.', 404)
+  }
   return ok(res, normalizeProducto(rows[0]))
 })
 
@@ -166,6 +173,10 @@ const createProducto = asyncHandler(async (req, res) => {
       await conn.query('INSERT INTO producto_imagenes (idPro, url, orden) VALUES ?', [values])
     }
 
+    await registrar(conn, req, {
+      accion: 'producto.crear', entidad: 'producto', idEntidad: idPro,
+      despues: { nombre, precio, stock, activo },
+    })
     await conn.commit()
 
     const [rows] = await pool.query(`${SELECT_PRODUCTO_BASE} WHERE p.idPro = ?`, [idPro])
@@ -214,6 +225,11 @@ const updateProducto = asyncHandler(async (req, res) => {
   try {
     await conn.beginTransaction()
 
+    const [previoRows] = await conn.query(
+      'SELECT nombre, precio, activo, idCat, idProv FROM productos WHERE idPro = ?',
+      [req.params.id]
+    )
+
     if (sets.length > 0) {
       vals.push(req.params.id)
       const [result] = await conn.query(
@@ -240,6 +256,26 @@ const updateProducto = asyncHandler(async (req, res) => {
       }
     }
 
+    // En la bitácora solo quedan los campos que de verdad cambiaron.
+    const previo = previoRows[0] || {}
+    const antes = {}
+    const despues = {}
+    for (const campo of ['nombre', 'precio', 'activo', 'idCat', 'idProv']) {
+      if (!Object.prototype.hasOwnProperty.call(req.body, campo)) continue
+      const viejo = campo === 'precio' ? Number(previo[campo]) : campo === 'activo' ? Boolean(previo[campo]) : previo[campo]
+      const nuevo = campo === 'activo' ? Boolean(req.body[campo]) : req.body[campo]
+      if (viejo !== nuevo) {
+        antes[campo] = viejo
+        despues[campo] = nuevo
+      }
+    }
+    if (Object.keys(despues).length > 0 || tieneImagenes) {
+      await registrar(conn, req, {
+        accion: 'producto.editar', entidad: 'producto', idEntidad: Number(req.params.id),
+        antes, despues: tieneImagenes ? { ...despues, imagenes: (imagenes || []).length } : despues,
+      })
+    }
+
     await conn.commit()
   } catch (err) {
     await conn.rollback()
@@ -264,6 +300,10 @@ const deleteProducto = asyncHandler(async (req, res) => {
     [req.params.id]
   )
   if (result.affectedRows === 0) return fail(res, 'Producto no encontrado.', 404)
+  await registrar(pool, req, {
+    accion: 'producto.desactivar', entidad: 'producto', idEntidad: Number(req.params.id),
+    antes: { activo: true }, despues: { activo: false },
+  })
   return ok(res, { deleted: true, idPro: Number(req.params.id) })
 })
 
@@ -271,6 +311,8 @@ const deleteProducto = asyncHandler(async (req, res) => {
 // body: { cantidad_disp } para fijar el valor, o { ajuste } para sumar/restar
 const updateStock = asyncHandler(async (req, res) => {
   const { cantidad_disp, ajuste, ubicacion } = req.body
+
+  const [antesRows] = await pool.query('SELECT cantidad_disp FROM inventario WHERE idPro = ?', [req.params.id])
 
   if (cantidad_disp != null) {
     await pool.query(
@@ -291,6 +333,13 @@ const updateStock = asyncHandler(async (req, res) => {
     [req.params.id]
   )
   if (rows.length === 0) return fail(res, 'Ese producto no tiene registro de inventario.', 404)
+  const stockAntes = antesRows[0]?.cantidad_disp
+  if (stockAntes !== rows[0].stock) {
+    await registrar(pool, req, {
+      accion: 'producto.stock', entidad: 'producto', idEntidad: Number(req.params.id),
+      antes: { stock: stockAntes }, despues: { stock: rows[0].stock },
+    })
+  }
   return ok(res, rows[0])
 })
 

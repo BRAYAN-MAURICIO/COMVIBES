@@ -88,7 +88,6 @@ function Home() {
       }, 300)
     }, 3000)
     return () => clearInterval(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroSlides.length])
 
   const total    = destacados.length

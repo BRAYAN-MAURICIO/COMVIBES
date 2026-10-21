@@ -1,35 +1,32 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext } from 'react'
 import * as pedidosApi from '../api/pedidos'
 import { useAuth } from './AuthContext'
+import { useCarga } from '../hooks/useCarga'
 
 const OrdersContext = createContext(null)
 
+// GET /pedidos ya devuelve, por cada pedido: detalle, envio, pago, factura
+// y un snapshot de la dirección — así que este único fetch alimenta a
+// OrdersContext, EnviosContext, PagosContext y FacturasContext a la vez.
+// El backend puede devolver array plano (admin sin paginar) o { pedidos, ... }.
+async function cargarPedidos() {
+  const res = await pedidosApi.getPedidos()
+  return Array.isArray(res) ? res : (res?.pedidos ?? [])
+}
+
 function OrdersProvider({ children }) {
-  const { isAuthenticated } = useAuth()
-  const [pedidos, setPedidos] = useState([])
-
-  // GET /pedidos ya devuelve, por cada pedido: detalle, envio, pago, factura
-  // y un snapshot de la dirección — así que este único fetch alimenta a
-  // OrdersContext, EnviosContext, PagosContext y FacturasContext a la vez.
-  const fetchPedidos = useCallback(async () => {
-    if (!isAuthenticated) {
-      setPedidos([])
-      return
-    }
-    const res = await pedidosApi.getPedidos()
-    // El backend puede devolver array plano (admin sin paginar) o { pedidos, ... }
-    setPedidos(Array.isArray(res) ? res : (res?.pedidos ?? []))
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    fetchPedidos()
-  }, [fetchPedidos])
+  const { isAuthenticated, user } = useAuth()
+  const { datos: pedidos, setDatos: setPedidos, recargar: fetchPedidos } = useCarga(cargarPedidos, {
+    habilitado: isAuthenticated,
+    clave: user?.idUsu,
+    inicial: [],
+  })
 
   // Checkout: el carrito ya debe estar sincronizado en el backend antes de
   // llamar esto (ver CheckoutFlow.jsx). El backend arma pedido + pago +
   // factura + envío en una sola transacción y descuenta el inventario.
-  const createOrder = async ({ idDir, idMet }) => {
-    const nuevoPedido = await pedidosApi.createPedido({ idDir, idMet })
+  const createOrder = async ({ idDir, idMet, totalEsperado }) => {
+    const nuevoPedido = await pedidosApi.createPedido({ idDir, idMet, totalEsperado })
     setPedidos((prev) => [nuevoPedido, ...prev])
     return nuevoPedido
   }
