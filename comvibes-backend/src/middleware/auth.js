@@ -28,7 +28,11 @@ async function requireAuth(req, res, next) {
     // El rol se lee de la BD, no del token: si un admin le quita el rol a
     // otro, el token viejo seguía diciendo 'admin' hasta caducar (7 días).
     const [rows] = await pool.query(
-      `SELECT c.estado, c.password_changed_at, r.nombre AS rol
+      // UNIX_TIMESTAMP: el instante se convierte a segundos en MySQL. Antes
+      // se armaba con new Date() sobre el texto de la fecha, que Node lee en
+      // SU zona horaria; con Node y la base en zonas distintas, tras cambiar
+      // la contraseña todos los tokens nuevos se rechazaban durante horas.
+      `SELECT c.estado, UNIX_TIMESTAMP(c.password_changed_at) AS password_changed_ts, r.nombre AS rol
          FROM credencial c
          LEFT JOIN usuariorol ur ON ur.idUsu = c.idUsu
          LEFT JOIN roles r ON r.idRol = ur.idRol
@@ -55,9 +59,8 @@ async function requireAuth(req, res, next) {
 
   // FIX #6: un token emitido antes del último cambio de contraseña ya no vale,
   // aunque todavía no haya expirado.
-  if (cuenta.password_changed_at) {
-    const changedAt = new Date(cuenta.password_changed_at).getTime() / 1000
-    if (decoded.iat < changedAt) {
+  if (cuenta.password_changed_ts) {
+    if (decoded.iat < Number(cuenta.password_changed_ts)) {
       return fail(res, 'Sesión expirada. Inicia sesión de nuevo.', 401)
     }
   }

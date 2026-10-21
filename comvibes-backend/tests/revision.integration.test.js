@@ -3,7 +3,8 @@
 const request = require('supertest')
 const app = require('../src/app')
 const { pool } = require('../src/config/db')
-const { describeDB, crearUsuario, productoConStock, metodoActivo, comprar } = require('./helpers')
+const { describeDB, crearUsuario, productoConStock, metodoActivo, comprar, PASS } = require('./helpers')
+const { signToken } = require('../src/utils/jwt')
 
 const auth = (u) => ({ Authorization: `Bearer ${u.token}` })
 const unico = (prefijo) => `${prefijo}.${Date.now()}.${Math.random().toString(36).slice(2, 7)}@test.com`
@@ -94,5 +95,39 @@ describeDB('Revisión entre módulos', () => {
     await cambiar(otro, 'En Camino')
     await cambiar(otro, 'Cancelado')
     expect((await estadoEnvio(otro)).estado_envio).toBe('Devuelto')
+  })
+
+  // Estas dos pruebas fallaban cuando el proceso de Node y MySQL estaban en
+  // zonas horarias distintas (correr con TZ=America/Bogota contra una base en UTC).
+  it('RV-7 · tras cambiar la contraseña, el token viejo se rechaza y uno nuevo funciona', async () => {
+    const cliente = await crearUsuario(unico('cli'), 'cliente')
+    const cambio = await request(app).patch('/api/usuarios/mi-perfil/password').set(auth(cliente))
+      .send({ passwordActual: PASS, passwordNueva: 'OtraClave12345' })
+    expect(cambio.status).toBe(200)
+
+    const viejo = await request(app).get('/api/auth/me').set(auth(cliente))
+    expect(viejo.status).toBe(401)
+
+    await new Promise((r) => setTimeout(r, 1100)) // un login posterior al cambio
+    const nuevo = signToken({ idUsu: cliente.idUsu, correo: cliente.correo, rol: 'cliente' })
+    const me = await request(app).get('/api/auth/me').set({ Authorization: `Bearer ${nuevo}` })
+    expect(me.status).toBe(200)
+  })
+
+  it('RV-7 · el código de verificación vence a los 10 minutos según el reloj de MySQL', async () => {
+    // Se usa el registro y no forgot-password porque RV-2 ya agotó el límite
+    // de recuperación para esta IP (el limitador vive en memoria).
+    const correo = unico('nuevo')
+    const reg = await request(app).post('/api/auth/register')
+      .send({ nombre: 'Ana', apellido: 'Ruiz', correo, password: 'Segura12345' })
+    expect(reg.status).toBe(201)
+    const [[f]] = await pool.query(
+      `SELECT TIMESTAMPDIFF(SECOND, NOW(), v.expira_en) AS restante
+         FROM email_verifications v JOIN credencial c ON c.idUsu = v.idUsu
+        WHERE c.correo = ? ORDER BY v.idVer DESC LIMIT 1`,
+      [correo]
+    )
+    expect(Number(f.restante)).toBeGreaterThan(590)
+    expect(Number(f.restante)).toBeLessThanOrEqual(600)
   })
 })

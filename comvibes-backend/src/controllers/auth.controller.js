@@ -37,7 +37,11 @@ const mensajeCuentaNoActiva = (estado) =>
 
 const generarCodigo = () => String(crypto.randomInt(100000, 1000000))
 const hashCodigo = (codigo) => bcrypt.hash(codigo, 10)
-const fechaExpiracion = () => new Date(Date.now() + CODIGO_TTL_MS)
+// La expiración se calcula en MySQL (DATE_ADD sobre NOW()), no en Node: se
+// compara contra NOW() de MySQL, y si el servidor de Node y el de la base
+// están en zonas horarias distintas (p. ej. Node en Bogotá y la base en UTC,
+// lo normal al desplegar) el código nacía vencido o duraba horas de más.
+const EXPIRA_EN_SQL = `DATE_ADD(NOW(), INTERVAL ${CODIGO_TTL_MS / 1000} SECOND)`
 
 /**
  * Busca el último código vivo de una tabla de códigos y lo compara.
@@ -157,8 +161,8 @@ async function crearUsuarioYCredencial(conn, { nombre, apellido, correo, passwor
 async function emitirCodigoVerificacion(conn, { idUsu, correo, nombre }) {
   const codigo = generarCodigo()
   await conn.query(
-    'INSERT INTO email_verifications (idUsu, codigo_hash, expira_en) VALUES (?, ?, ?)',
-    [idUsu, await hashCodigo(codigo), fechaExpiracion()]
+    `INSERT INTO email_verifications (idUsu, codigo_hash, expira_en) VALUES (?, ?, ${EXPIRA_EN_SQL})`,
+    [idUsu, await hashCodigo(codigo)]
   )
   await mailer.enviarCodigoVerificacion(correo, nombre, codigo)
 }
@@ -275,8 +279,8 @@ const resendVerification = asyncHandler(async (req, res) => {
 
   await pool.query('UPDATE email_verifications SET usado = TRUE WHERE idUsu = ?', [idUsu])
   await pool.query(
-    'INSERT INTO email_verifications (idUsu, codigo_hash, expira_en) VALUES (?, ?, ?)',
-    [idUsu, await hashCodigo(codigo), fechaExpiracion()]
+    `INSERT INTO email_verifications (idUsu, codigo_hash, expira_en) VALUES (?, ?, ${EXPIRA_EN_SQL})`,
+    [idUsu, await hashCodigo(codigo)]
   )
 
   try {
@@ -363,8 +367,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
   // Invalidar códigos anteriores del mismo usuario
   await pool.query('UPDATE password_resets SET usado = TRUE WHERE idUsu = ?', [idUsu])
   await pool.query(
-    'INSERT INTO password_resets (idUsu, codigo_hash, expira_en) VALUES (?, ?, ?)',
-    [idUsu, await hashCodigo(codigo), fechaExpiracion()]
+    `INSERT INTO password_resets (idUsu, codigo_hash, expira_en) VALUES (?, ?, ${EXPIRA_EN_SQL})`,
+    [idUsu, await hashCodigo(codigo)]
   )
 
   try {
