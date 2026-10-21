@@ -30,7 +30,10 @@ const forgotPasswordLimiter = rateLimit({
     success: false,
     message: 'Demasiadas solicitudes de recuperación. Intenta de nuevo en 1 hora.',
   },
-  skipSuccessfulRequests: true,
+  // Aquí se cuentan TODAS las peticiones. Antes tenía skipSuccessfulRequests,
+  // pero forgot-password y resend-verification responden siempre 200 (para
+  // no revelar si el correo existe), así que nunca se contaba ninguna y el
+  // límite no frenaba nada: se podían mandar correos sin tope a una cuenta.
 })
 
 

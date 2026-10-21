@@ -22,4 +22,14 @@ describeDB('Revisión entre módulos', () => {
     const lista = await request(app).get('/api/usuarios').set(auth(otro))
     expect(lista.status).toBe(403)
   })
+
+  it('RV-2 · el límite de recuperación de contraseña corta en la sexta solicitud de la hora', async () => {
+    const estados = []
+    for (let i = 0; i < 6; i++) {
+      const r = await request(app).post('/api/auth/forgot-password').send({ correo: unico('nadie') })
+      estados.push(r.status)
+    }
+    expect(estados.slice(0, 5)).toEqual([200, 200, 200, 200, 200])
+    expect(estados[5]).toBe(429)
+  })
 })
