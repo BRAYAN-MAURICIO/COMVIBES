@@ -3,7 +3,7 @@
 const request = require('supertest')
 const app = require('../src/app')
 const { pool } = require('../src/config/db')
-const { describeDB, crearUsuario } = require('./helpers')
+const { describeDB, crearUsuario, productoConStock, metodoActivo } = require('./helpers')
 
 const auth = (u) => ({ Authorization: `Bearer ${u.token}` })
 const unico = (prefijo) => `${prefijo}.${Date.now()}.${Math.random().toString(36).slice(2, 7)}@test.com`
@@ -31,5 +31,25 @@ describeDB('Revisión entre módulos', () => {
     }
     expect(estados.slice(0, 5)).toEqual([200, 200, 200, 200, 200])
     expect(estados[5]).toBe(429)
+  })
+
+  it('RV-4 · el checkout rechaza un producto que el admin desactivó después de agregarlo', async () => {
+    const admin = await crearUsuario(unico('admin'), 'admin')
+    const cliente = await crearUsuario(unico('cli'), 'cliente')
+    const idPro = await productoConStock(20)
+    const dir = await request(app).post('/api/direcciones').set(auth(cliente)).send({ direccion: 'Calle 1', ciudad: 'Neiva' })
+    await request(app).post('/api/carrito/items').set(auth(cliente)).send({ idPro, cantidad: 1 })
+
+    await request(app).delete(`/api/productos/${idPro}`).set(auth(admin)) // desactivar
+    try {
+      const r = await request(app).post('/api/pedidos').set(auth(cliente))
+        .send({ idDir: dir.body.data.idDir, idMet: await metodoActivo() })
+      expect(r.status).toBe(400)
+      expect(r.body.message).toMatch(/ya no está disponible/)
+      const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM pedidos WHERE idUsu = ?', [cliente.idUsu])
+      expect(Number(n)).toBe(0)
+    } finally {
+      await pool.query('UPDATE productos SET activo = TRUE WHERE idPro = ?', [idPro])
+    }
   })
 })

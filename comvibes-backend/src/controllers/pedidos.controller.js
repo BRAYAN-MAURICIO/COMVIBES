@@ -185,6 +185,14 @@ async function validarCheckout(idUsu, idDir) {
   const [items] = await pool.query(SELECT_ITEMS, [idCar])
   if (items.length === 0) return { error: { mensaje: 'Tu carrito está vacío.', estado: 400 } }
 
+  // Un producto desactivado por el admin no se puede comprar, aunque haya
+  // quedado en el carrito. El frontend ya lo saca al sincronizar, pero el API
+  // lo aceptaba si se llamaba directo (revisión entre módulos, oct 2026).
+  const inactivo = items.find((i) => !i.activo)
+  if (inactivo) {
+    return { error: { mensaje: `"${inactivo.nombre}" ya no está disponible. Quítalo del carrito para continuar.`, estado: 400 } }
+  }
+
   const sinStock = items.find((i) => i.cantidad > i.stock_disponible)
   if (sinStock) {
     return { error: { mensaje: `No hay suficiente stock de "${sinStock.nombre}".`, estado: 400 } }
