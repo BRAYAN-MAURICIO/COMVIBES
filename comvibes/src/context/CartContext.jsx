@@ -7,7 +7,7 @@ const CartContext = createContext(null)
 const STORAGE_KEY = 'comvibes_cart'
 
 function CartProvider({ children }) {
-  const { productos } = useProducts()
+  const { productos, loading: catalogoCargando } = useProducts()
   const { isAuthenticated, loading: authLoading } = useAuth()
 
   // El carrito vive en estado local (fuente de verdad en todo momento).
@@ -164,21 +164,31 @@ function CartProvider({ children }) {
 
   // Los ítems que se exponen ya traen el precio vigente y la cantidad
   // recortada al stock disponible, así ShoppingCart y CheckoutFlow muestran
-  // exactamente lo que se va a cobrar. Antes el recorte se hacía con un
-  // useEffect que reescribía el carrito cada vez que cambiaba el catálogo;
-  // derivarlo aquí es más simple y no borra nada: si el stock vuelve, la
-  // cantidad que el cliente eligió sigue ahí.
-  const itemsVigentes = useMemo(
-    () =>
-      items
-        .map((item) => {
-          const producto = productos.find((p) => p.idPro === item.idPro)
-          const cantidad = producto ? Math.min(item.cantidad, producto.stock) : item.cantidad
-          return { ...item, cantidad, precio: getPrecio(item) }
-        })
-        .filter((item) => item.cantidad > 0),
-    [items, productos, getPrecio]
-  )
+  // exactamente lo que se va a cobrar. Derivarlo aquí no borra nada: si el
+  // stock vuelve, la cantidad que el cliente eligió sigue ahí.
+  //
+  // Productos que ya no están en el catálogo (el admin los desactivó): antes
+  // se quedaban en el carrito con el precio viejo y sumando al total. El
+  // backend los descartaba al sincronizar, el total ya no coincidía y el
+  // checkout respondía 409 una y otra vez, sin forma de salir del ciclo.
+  // Ahora salen del total y se exponen aparte para que el carrito los muestre.
+  // Solo se marcan cuando el catálogo ya cargó y trajo algo: mientras carga,
+  // o si falló (lista vacía), no se puede saber qué está disponible.
+  const catalogoListo = !catalogoCargando && productos.length > 0
+  const { itemsVigentes, itemsNoDisponibles } = useMemo(() => {
+    const vigentes = []
+    const noDisponibles = []
+    for (const item of items) {
+      const producto = productos.find((p) => p.idPro === item.idPro)
+      if (catalogoListo && (!producto || producto.activo === false)) {
+        noDisponibles.push(item)
+        continue
+      }
+      const cantidad = producto ? Math.min(item.cantidad, producto.stock) : item.cantidad
+      if (cantidad > 0) vigentes.push({ ...item, cantidad, precio: getPrecio(item) })
+    }
+    return { itemsVigentes: vigentes, itemsNoDisponibles: noDisponibles }
+  }, [items, productos, getPrecio, catalogoListo])
 
   const total = useMemo(
     () => Math.round(itemsVigentes.reduce((acc, item) => acc + item.precio * item.cantidad, 0) * 100) / 100,
@@ -192,6 +202,7 @@ function CartProvider({ children }) {
 
   const value = {
     items: itemsVigentes,
+    itemsNoDisponibles,
     addToCart,
     removeFromCart,
     updateQuantity,

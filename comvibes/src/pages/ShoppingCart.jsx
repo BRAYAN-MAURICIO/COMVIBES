@@ -81,12 +81,12 @@ function CartSummary({ items, total, onCheckout }) {
 }
 
 function ShoppingCart() {
-  const { items, removeFromCart, updateQuantity, total, getStock, getImagen } = useCart()
+  const { items, itemsNoDisponibles, removeFromCart, updateQuantity, total, getStock, getImagen } = useCart()
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
 
-  if (items.length === 0) {
+  if (items.length === 0 && itemsNoDisponibles.length === 0) {
     return (
       <div className='container py-5 text-center'>
         <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4" aria-hidden="true">
@@ -130,6 +130,30 @@ function ShoppingCart() {
     <div className='container py-5'>
       <Breadcrumbs items={[{ label: 'Carrito de Compras' }]} />
       <h2 className='section-title'>Carrito de Compras</h2>
+
+      {itemsNoDisponibles.length > 0 && (
+        <div className='alert alert-warning rounded-4' role='alert'>
+          <p className='fw-semibold mb-2'>
+            {itemsNoDisponibles.length === 1
+              ? 'Este producto ya no está disponible y no se incluye en tu compra:'
+              : 'Estos productos ya no están disponibles y no se incluyen en tu compra:'}
+          </p>
+          <ul className='list-unstyled mb-0'>
+            {itemsNoDisponibles.map((item) => (
+              <li key={item.idPro} className='d-flex justify-content-between align-items-center gap-2 py-1'>
+                <span>{item.nombre}</span>
+                <button
+                  type='button'
+                  className='btn btn-sm btn-outline-danger'
+                  onClick={() => removeFromCart(item.idPro)}
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className='row g-4 align-items-start'>
         {/* ── Lista de productos ── */}
@@ -208,7 +232,7 @@ function ShoppingCart() {
         {/* ── Resumen sticky ── */}
         <div className='col-lg-4'>
           <div className='cart-summary-wrapper'>
-            <CartSummary items={items} total={total} onCheckout={handleCheckout} />
+            {items.length > 0 && <CartSummary items={items} total={total} onCheckout={handleCheckout} />}
           </div>
         </div>
       </div>

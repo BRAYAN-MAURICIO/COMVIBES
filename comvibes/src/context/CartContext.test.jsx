@@ -56,6 +56,31 @@ describe('CartContext', () => {
     expect(result.current.items.map((i) => i.cantidad)).toEqual([5, 1])
   })
 
+  it('un producto que el admin desactivó sale del total y queda aparte como no disponible', () => {
+    mocks.productos = [producto(1, 1000, 10), producto(2, 5000, 10)]
+    const { result, rerender } = renderHook(() => useCart(), { wrapper })
+    act(() => { result.current.addToCart(producto(1, 1000, 10), 1) })
+    act(() => { result.current.addToCart(producto(2, 5000, 10), 1) })
+    expect(result.current.total).toBe(6000)
+
+    mocks.productos = [producto(1, 1000, 10)] // el 2 ya no está en el catálogo público
+    rerender()
+    expect(result.current.items.map((i) => i.idPro)).toEqual([1])
+    expect(result.current.itemsNoDisponibles.map((i) => i.idPro)).toEqual([2])
+    expect(result.current.total).toBe(1000)
+
+    act(() => { result.current.removeFromCart(2) })
+    expect(result.current.itemsNoDisponibles).toEqual([])
+  })
+
+  it('mientras el catálogo no ha cargado no marca nada como no disponible', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([{ idPro: 9, nombre: 'P9', precio: 700, cantidad: 1 }]))
+    mocks.productos = []
+    const { result } = renderHook(() => useCart(), { wrapper })
+    expect(result.current.items).toHaveLength(1)
+    expect(result.current.itemsNoDisponibles).toEqual([])
+  })
+
   it('recargar la página con sesión abierta NO vacía el carrito (bug corregido en la fase 2)', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([{ idPro: 3, nombre: 'P3', precio: 900, cantidad: 2 }]))
     mocks.productos = [producto(3, 900, 10)]
