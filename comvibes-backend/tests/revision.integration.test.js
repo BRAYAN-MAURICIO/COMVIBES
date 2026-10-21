@@ -62,4 +62,37 @@ describeDB('Revisión entre módulos', () => {
     expect(r.status).toBe(200)
     expect(r.body.data.pago.estado).toBe('Reembolsado')
   })
+
+  it('RV-6 · el estado del envío sigue al del pedido', async () => {
+    const admin = await crearUsuario(unico('admin'), 'admin')
+    const cliente = await crearUsuario(unico('cli'), 'cliente')
+    const idPro = await productoConStock(20)
+    const estadoEnvio = async (idPed) => {
+      const [[e]] = await pool.query('SELECT estado_envio, fecha_envio FROM envios WHERE idPed = ?', [idPed])
+      return e
+    }
+    const cambiar = (idPed, estado) =>
+      request(app).patch(`/api/pedidos/${idPed}/estado`).set(auth(admin)).send({ estado })
+
+    const { idPed } = await comprar(app, cliente, idPro, 1)
+    expect((await estadoEnvio(idPed)).estado_envio).toBe('Pendiente')
+
+    await cambiar(idPed, 'En Camino')
+    const enviado = await estadoEnvio(idPed)
+    expect(enviado.estado_envio).toBe('Enviado')
+    expect(enviado.fecha_envio).toBeTruthy()
+
+    await cambiar(idPed, 'Pendiente') // corrección de un clic equivocado
+    expect(await estadoEnvio(idPed)).toEqual({ estado_envio: 'Pendiente', fecha_envio: null })
+
+    await cambiar(idPed, 'En Camino')
+    await cambiar(idPed, 'Entregado')
+    expect((await estadoEnvio(idPed)).estado_envio).toBe('Entregado')
+
+    // Cancelar con el paquete ya en camino lo marca como devuelto
+    const { idPed: otro } = await comprar(app, cliente, idPro, 1)
+    await cambiar(otro, 'En Camino')
+    await cambiar(otro, 'Cancelado')
+    expect((await estadoEnvio(otro)).estado_envio).toBe('Devuelto')
+  })
 })

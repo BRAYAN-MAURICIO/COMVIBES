@@ -406,6 +406,44 @@ async function reembolsarPago(conn, idPed) {
   )
 }
 
+/**
+ * Mantiene el estado del envío alineado con el del pedido (dentro de `conn`).
+ * Antes eran independientes y el panel no tenía cómo cambiar estado_envio:
+ * un pedido "Entregado" quedaba con el envío en "Pendiente".
+ *
+ * Solo se pisan los estados que el cambio de pedido vuelve incorrectos; si el
+ * admin ya cargó un estado más preciso (p. ej. "En tránsito"), se respeta.
+ */
+async function sincronizarEnvio(conn, idPed, estadoPedido) {
+  if (estadoPedido === 'En Camino') {
+    await conn.query(
+      `UPDATE envios SET estado_envio = 'Enviado', fecha_envio = COALESCE(fecha_envio, NOW())
+        WHERE idPed = ? AND (estado_envio IS NULL OR estado_envio = 'Pendiente')`,
+      [idPed]
+    )
+  } else if (estadoPedido === 'Pendiente') {
+    // Corrección de un clic equivocado: el paquete en realidad no ha salido
+    await conn.query(
+      `UPDATE envios SET estado_envio = 'Pendiente', fecha_envio = NULL
+        WHERE idPed = ? AND estado_envio IN ('Enviado', 'En tránsito')`,
+      [idPed]
+    )
+  } else if (estadoPedido === 'Entregado') {
+    await conn.query(
+      `UPDATE envios SET estado_envio = 'Entregado', fecha_envio = COALESCE(fecha_envio, NOW())
+        WHERE idPed = ?`,
+      [idPed]
+    )
+  } else if (estadoPedido === 'Cancelado') {
+    // Si ya había salido, el paquete vuelve; si no había salido, no hay envío que mover
+    await conn.query(
+      `UPDATE envios SET estado_envio = 'Devuelto'
+        WHERE idPed = ? AND estado_envio IN ('Enviado', 'En tránsito')`,
+      [idPed]
+    )
+  }
+}
+
 // PATCH /api/pedidos/:id/estado (admin) - dispara notificación al dueño del pedido
 const cambiarEstadoPedido = asyncHandler(async (req, res) => {
   const { estado } = req.body
@@ -453,6 +491,7 @@ const cambiarEstadoPedido = asyncHandler(async (req, res) => {
       await reponerStock(conn, req.params.id)
       await reembolsarPago(conn, req.params.id)
     }
+    await sincronizarEnvio(conn, req.params.id, estado)
     await registrar(conn, req, {
       accion: 'pedido.estado', entidad: 'pedido', idEntidad: Number(req.params.id),
       antes: { estado: actual }, despues: { estado },
