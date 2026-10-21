@@ -6,6 +6,15 @@ import { useFacturas } from '../context/FacturasContext'
 import { usePagos } from '../context/PagosContext'
 import { formatCurrency, formatDate } from '../utils/formatters'
 
+// Color del estado del pago. Antes siempre salía en verde, aunque el pedido
+// estuviera cancelado y el pago reembolsado.
+const COLOR_PAGO = {
+  Completado: 'bg-success-subtle text-success',
+  Pendiente: 'bg-warning-subtle text-warning-emphasis',
+  Reembolsado: 'bg-info-subtle text-info-emphasis',
+  Fallido: 'bg-danger-subtle text-danger',
+}
+
 // Vista imprimible/descargable de la factura de un pedido.
 // No usa ClientLayout (sin navbar/footer) para que al imprimir
 // (window.print) solo salga el comprobante.
@@ -115,8 +124,11 @@ function Invoice() {
             <div className='small'>
               <p className='mb-0 text-muted'>Método de pago: <strong>{pago.metodo}</strong></p>
               <p className='mb-0'>
-                Estado: <span className='badge bg-success-subtle text-success'>{pago.estado}</span>
+                Estado: <span className={`badge ${COLOR_PAGO[pago.estado] || 'bg-secondary-subtle text-secondary'}`}>{pago.estado}</span>
               </p>
+              {pedido.estado === 'Cancelado' && (
+                <p className='mb-0 text-danger fw-semibold'>Pedido cancelado: el pago fue reembolsado.</p>
+              )}
             </div>
           )}
 

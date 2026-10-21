@@ -3,7 +3,7 @@
 const request = require('supertest')
 const app = require('../src/app')
 const { pool } = require('../src/config/db')
-const { describeDB, crearUsuario, productoConStock, metodoActivo } = require('./helpers')
+const { describeDB, crearUsuario, productoConStock, metodoActivo, comprar } = require('./helpers')
 
 const auth = (u) => ({ Authorization: `Bearer ${u.token}` })
 const unico = (prefijo) => `${prefijo}.${Date.now()}.${Math.random().toString(36).slice(2, 7)}@test.com`
@@ -51,5 +51,15 @@ describeDB('Revisión entre módulos', () => {
     } finally {
       await pool.query('UPDATE productos SET activo = TRUE WHERE idPro = ?', [idPro])
     }
+  })
+
+  it('RV-5 · cancelar un pedido reembolsa el pago simulado', async () => {
+    const admin = await crearUsuario(unico('admin'), 'admin')
+    const cliente = await crearUsuario(unico('cli'), 'cliente')
+    const { idPed } = await comprar(app, cliente, await productoConStock(20), 1)
+
+    const r = await request(app).patch(`/api/pedidos/${idPed}/estado`).set(auth(admin)).send({ estado: 'Cancelado' })
+    expect(r.status).toBe(200)
+    expect(r.body.data.pago.estado).toBe('Reembolsado')
   })
 })

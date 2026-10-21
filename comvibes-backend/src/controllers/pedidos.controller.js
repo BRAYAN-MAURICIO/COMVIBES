@@ -394,6 +394,18 @@ async function reponerStock(conn, idPed) {
   }
 }
 
+/**
+ * Al cancelar, el pago simulado pasa a Reembolsado (dentro de `conn`).
+ * Antes el stock volvía al inventario pero el pago quedaba "Completado" y la
+ * factura seguía mostrándolo como cobrado (revisión entre módulos, oct 2026).
+ */
+async function reembolsarPago(conn, idPed) {
+  await conn.query(
+    "UPDATE pagos SET estado = 'Reembolsado' WHERE idPed = ? AND estado = 'Completado'",
+    [idPed]
+  )
+}
+
 // PATCH /api/pedidos/:id/estado (admin) - dispara notificación al dueño del pedido
 const cambiarEstadoPedido = asyncHandler(async (req, res) => {
   const { estado } = req.body
@@ -437,7 +449,10 @@ const cambiarEstadoPedido = asyncHandler(async (req, res) => {
     }
 
     await conn.query('UPDATE pedidos SET estado = ? WHERE idPed = ?', [estado, req.params.id])
-    if (estado === 'Cancelado') await reponerStock(conn, req.params.id)
+    if (estado === 'Cancelado') {
+      await reponerStock(conn, req.params.id)
+      await reembolsarPago(conn, req.params.id)
+    }
     await registrar(conn, req, {
       accion: 'pedido.estado', entidad: 'pedido', idEntidad: Number(req.params.id),
       antes: { estado: actual }, despues: { estado },
