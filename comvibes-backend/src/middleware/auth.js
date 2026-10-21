@@ -25,8 +25,15 @@ async function requireAuth(req, res, next) {
   let cuenta
   try {
     const { pool } = require('../config/db')
+    // El rol se lee de la BD, no del token: si un admin le quita el rol a
+    // otro, el token viejo seguía diciendo 'admin' hasta caducar (7 días).
     const [rows] = await pool.query(
-      'SELECT estado, password_changed_at FROM credencial WHERE idUsu = ?',
+      `SELECT c.estado, c.password_changed_at, r.nombre AS rol
+         FROM credencial c
+         LEFT JOIN usuariorol ur ON ur.idUsu = c.idUsu
+         LEFT JOIN roles r ON r.idRol = ur.idRol
+        WHERE c.idUsu = ?
+        LIMIT 1`,
       [decoded.idUsu]
     )
     cuenta = rows[0]
@@ -55,7 +62,8 @@ async function requireAuth(req, res, next) {
     }
   }
 
-  req.user = decoded
+  // El rol vigente reemplaza al del token (que puede estar desactualizado).
+  req.user = { ...decoded, rol: cuenta.rol }
   next()
 }
 
